@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "id": "checkout-proposed",
+  "title": "Guest checkout (proposed)",
+  "description": "Same goal, with the forced signup removed, the failure branches modelled, and the promo interstitial moved off the critical path.",
+  "app": { "name": "Example Shop", "stack": "nextjs", "commit": "proposal" },
+  "direction": "TD",
+  "lanes": [
+    { "id": "user", "label": "User" },
+    { "id": "ui", "label": "App UI" },
+    { "id": "api", "label": "Backend" }
+  ],
+  "nodes": [
+    { "id": "start", "type": "start", "label": "Taps Checkout in cart", "lane": "user", "kind": "happy" },
+
+    { "id": "cart", "type": "screen", "label": "Cart", "lane": "ui", "kind": "happy",
+      "route": "/cart", "annotations": { "taps": 1 } },
+
+    { "id": "address", "type": "screen", "label": "Contact + shipping", "lane": "ui", "kind": "happy",
+      "route": "/checkout/address",
+      "annotations": { "taps": 1, "required_fields": 5,
+        "note": "Email moved here; account creation offered after the order, pre-filled." } },
+
+    { "id": "shipping-api", "type": "api", "label": "POST /api/shipping/quote", "lane": "api", "kind": "happy",
+      "annotations": { "wait": "inline skeleton on the shipping options block" } },
+
+    { "id": "shipping-error", "type": "state", "label": "Quote unavailable", "lane": "ui", "kind": "error",
+      "annotations": { "note": "Inline message + Retry, flat-rate fallback offered." } },
+
+    { "id": "payment", "type": "screen", "label": "Payment", "lane": "ui", "kind": "happy",
+      "route": "/checkout/payment", "annotations": { "taps": 2, "required_fields": 4 } },
+
+    { "id": "psp", "type": "external", "label": "3-D Secure (bank page)", "lane": "api", "kind": "happy",
+      "annotations": { "friction": ["external_handoff"] } },
+
+    { "id": "charge", "type": "api", "label": "POST /api/orders", "lane": "api", "kind": "happy" },
+
+    { "id": "charge-error", "type": "state", "label": "Order could not be created", "lane": "ui", "kind": "error",
+      "annotations": { "note": "Cart preserved, idempotency key reused on retry." } },
+
+    { "id": "orders-db", "type": "data", "label": "orders table", "lane": "api", "kind": "neutral" },
+
+    { "id": "declined", "type": "screen", "label": "Payment declined", "lane": "ui", "kind": "error",
+      "route": "/checkout/declined",
+      "annotations": { "taps": 1, "note": "Cart preserved; Try another card returns to Payment." } },
+
+    { "id": "confirm", "type": "screen", "label": "Order confirmed", "lane": "ui", "kind": "happy",
+      "route": "/checkout/success",
+      "annotations": { "note": "Newsletter opt-in and 'save my details' offered here instead of mid-flow." } },
+
+    { "id": "done", "type": "end", "label": "Order placed", "lane": "user", "kind": "happy" }
+  ],
+  "edges": [
+    { "from": "start", "to": "cart", "kind": "happy" },
+    { "from": "cart", "to": "address", "label": "Checkout", "kind": "happy" },
+    { "from": "address", "to": "shipping-api", "label": "Continue", "kind": "happy" },
+    { "from": "shipping-api", "to": "payment", "label": "200", "kind": "happy" },
+    { "from": "shipping-api", "to": "shipping-error", "label": "5xx / timeout", "kind": "error" },
+    { "from": "shipping-error", "to": "shipping-api", "label": "Retry", "kind": "error" },
+    { "from": "shipping-error", "to": "payment", "label": "flat rate", "kind": "edge" },
+    { "from": "payment", "to": "psp", "label": "Pay", "kind": "happy" },
+    { "from": "payment", "to": "address", "label": "back", "kind": "back" },
+    { "from": "psp", "to": "charge", "label": "authorised", "kind": "happy" },
+    { "from": "psp", "to": "declined", "label": "rejected", "kind": "error" },
+    { "from": "declined", "to": "payment", "label": "Try another card", "kind": "error" },
+    { "from": "charge", "to": "orders-db", "label": "insert", "kind": "neutral" },
+    { "from": "charge", "to": "confirm", "label": "201", "kind": "happy" },
+    { "from": "charge", "to": "charge-error", "label": "5xx", "kind": "error" },
+    { "from": "charge-error", "to": "charge", "label": "Retry", "kind": "error" },
+    { "from": "confirm", "to": "done", "kind": "happy" }
+  ]
+}

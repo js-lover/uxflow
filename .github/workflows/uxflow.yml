@@ -1,0 +1,93 @@
+# CI for the uxflow repository itself.
+# Looking for the workflow to put in YOUR app's repo? See examples/ci/uxflow.yml.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: tests (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests -v
+
+  determinism:
+    name: generated output is reproducible
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate the example flows
+        run: python3 scripts/uxflow.py validate examples/*.flow.json
+
+      - name: Re-render the examples
+        run: |
+          python3 scripts/uxflow.py render examples/checkout.flow.json \
+                                           examples/checkout-proposed.flow.json \
+                                           -o examples/output
+          python3 scripts/uxflow.py diff   examples/checkout.flow.json \
+                                           examples/checkout-proposed.flow.json \
+                                           -o examples/output
+
+      # The core guarantee of this project: same IR in, byte-identical files out.
+      # If this fails, either the change is intentional (commit the regenerated
+      # examples) or something non-deterministic crept into the renderer.
+      - name: Committed output must match a fresh render
+        run: |
+          if ! git diff --quiet -- examples/output; then
+            echo "::error::Regenerated output differs from what is committed."
+            git --no-pager diff --stat -- examples/output
+            git --no-pager diff -- examples/output | head -100
+            exit 1
+          fi
+
+      - name: Render twice, compare
+        run: |
+          python3 scripts/uxflow.py render examples/checkout.flow.json -o /tmp/a
+          python3 scripts/uxflow.py render examples/checkout.flow.json -o /tmp/b
+          diff -r /tmp/a /tmp/b
+
+      - name: check must reject a tampered IR
+        run: |
+          python3 - <<'PY'
+          import sys; sys.path.insert(0, "scripts")
+          from uxflow_lib import ir
+          d = ir.load("examples/checkout.flow.json")
+          d["nodes"][1]["label"] = "Tampered"
+          ir.dump(d, "/tmp/tampered.flow.json")
+          PY
+          cp examples/output/.uxflow.lock.json /tmp/ || true
+          if python3 scripts/uxflow.py check /tmp/tampered.flow.json -o examples/output; then
+            echo "::error::check passed on a tampered IR"; exit 1
+          fi
+
+  lint:
+    name: syntax + schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Byte-compile all sources
+        run: python3 -m compileall -q scripts tests
+      - name: Schema and examples are valid JSON
+        run: |
+          python3 -c "import json;json.load(open('schema/flow.schema.json'))"
+          for f in examples/*.flow.json; do python3 -c "import json,sys;json.load(open(sys.argv[1]))" "$f"; done

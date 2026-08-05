@@ -1,0 +1,54 @@
+# Consumer template — copy this into YOUR app's repository as
+# .github/workflows/uxflow.yml
+#
+# It assumes uxflow lives at ./uxflow (vendored) and your flow definitions at
+# ./docs/ux-flows/*.flow.json. Adjust both paths to match your layout.
+
+name: UX flows
+
+on:
+  pull_request:
+    paths:
+      - 'docs/ux-flows/**'
+      - 'src/**'
+      - 'app/**'
+      - 'lib/**'
+  push:
+    branches: [main]
+
+jobs:
+  uxflow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 1. The IR must be well formed.
+      - name: Validate flow definitions
+        run: python3 uxflow/scripts/uxflow.py validate docs/ux-flows/*.flow.json
+
+      # 2. The committed diagrams must match the IR. Fails if someone edited a
+      #    flow.json without regenerating — this is what stops diagrams rotting.
+      - name: Check diagrams are up to date
+        run: python3 uxflow/scripts/uxflow.py check docs/ux-flows/*.flow.json -o docs/ux-flows
+
+      # 3. Block merges that introduce a dead end or an unhandled network failure.
+      #    Remove --fail-on-high while you are still adopting; the audit still runs.
+      - name: UX audit
+        run: python3 uxflow/scripts/uxflow.py audit docs/ux-flows/*.flow.json --fail-on-high
+
+      # 4. Surface the findings in the PR so reviewers see them without opening files.
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "## UX flow audit"
+            for f in docs/ux-flows/*.findings.md; do
+              [ -e "$f" ] || continue
+              echo ""
+              sed -n '1,60p' "$f"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

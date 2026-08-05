@@ -1,0 +1,48 @@
+name: Stack support request
+description: Ask for (or offer) a discovery playbook for a framework uxflow does not cover yet
+labels: [stack-support]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Adding a stack means adding one Markdown playbook. The renderer does not change.
+        See CONTRIBUTING.md — and if you know the framework well, a PR is very welcome.
+
+  - type: input
+    id: stack
+    attributes:
+      label: Framework / router
+      placeholder: "SvelteKit, Vue Router, Angular Router, Ionic, Kotlin Multiplatform…"
+    validations:
+      required: true
+
+  - type: textarea
+    id: routes
+    attributes:
+      label: How are routes declared?
+      description: A snippet of the real route declaration, plus the file it lives in.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: transitions
+    attributes:
+      label: How does navigation happen?
+      description: The API used to move between screens, and how the back stack is manipulated.
+      render: text
+
+  - type: textarea
+    id: guards
+    attributes:
+      label: Where do auth guards / redirects live?
+      render: text
+
+  - type: textarea
+    id: async
+    attributes:
+      label: How are loading, empty and error states expressed?
+      description: >-
+        This is where most findings come from. What does a missing error state look like
+        in this framework?
+      render: text

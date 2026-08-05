@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+/tmp/
+
+# Generated diagrams are committed on purpose -- that is the point of `uxflow check`.
+# Do NOT ignore docs/ux-flows/*.drawio, *.mmd, *.svg or .uxflow.lock.json.

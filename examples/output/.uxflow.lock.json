@@ -1,0 +1,10 @@
+{
+  "checkout": {
+    "hash": "ac3604074e5deec3",
+    "source": "examples/checkout.flow.json"
+  },
+  "checkout-proposed": {
+    "hash": "b87d703e6164b5fc",
+    "source": "examples/checkout-proposed.flow.json"
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/uxflow/uxflow/schema/flow.schema.json",
+  "title": "UXFlow Intermediate Representation",
+  "description": "Agent-agnostic description of a single user flow extracted from an application codebase. Agents produce this file; the deterministic renderer turns it into .drawio / .mmd / .svg.",
+  "type": "object",
+  "required": ["version", "id", "title", "nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": "1.0" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$",
+      "description": "Stable slug for this flow. Used as the output filename."
+    },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "app": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "stack": {
+          "type": "string",
+          "enum": ["nextjs", "react", "react-native", "expo", "flutter", "swiftui", "uikit", "compose", "other"]
+        },
+        "repo": { "type": "string" },
+        "commit": { "type": "string", "description": "Git SHA the flow was extracted from." }
+      }
+    },
+    "direction": {
+      "enum": ["TD", "LR"],
+      "default": "TD",
+      "description": "TD = top-down (default). LR = left-to-right."
+    },
+    "lanes": {
+      "type": "array",
+      "description": "Optional swimlanes. When present every node SHOULD declare a lane. Convention: user -> ui -> api -> data.",
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+          "label": { "type": "string" },
+          "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/node" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/edge" }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Optional externally measured numbers (analytics, session replay). Never invented by the agent.",
+      "additionalProperties": { "type": ["number", "string"] }
+    }
+  },
+  "definitions": {
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+          "description": "STABLE identifier. Derive it from route + component name, never from position or ordering. Renaming an id creates a churny git diff."
+        },
+        "type": {
+          "enum": ["start", "end", "screen", "modal", "action", "decision", "api", "data", "state", "external", "note"],
+          "description": "start/end = terminals. screen = a full page or route. modal = overlay/sheet. action = user interaction (tap, submit). decision = branch point. api = network call. data = persistence/cache. state = app or UI state. external = leaves the app (deep link, browser, OS). note = annotation only, no flow semantics."
+        },
+        "label": { "type": "string" },
+        "lane": { "type": "string", "description": "Lane id. Required when lanes are declared." },
+        "kind": {
+          "enum": ["happy", "error", "edge", "neutral"],
+          "default": "neutral",
+          "description": "happy = primary success path. error = failure handling. edge = rare/edge case. neutral = infrastructure."
+        },
+        "route": { "type": "string", "description": "URL path or named route, e.g. /checkout/payment" },
+        "source": {
+          "type": "string",
+          "description": "Traceability anchor: relative/path/to/File.tsx:120. REQUIRED for every node the agent derived from code."
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Rendered only in the --annotated variant.",
+          "properties": {
+            "note": { "type": "string" },
+            "taps": { "type": "integer", "minimum": 0, "description": "User interactions required to leave this node." },
+            "required_fields": { "type": "integer", "minimum": 0 },
+            "optional_fields": { "type": "integer", "minimum": 0 },
+            "wait": { "type": "string", "description": "Blocking wait, e.g. 'spinner until /orders resolves'." },
+            "friction": {
+              "type": "array",
+              "description": "Machine-checkable UX smells found in the code.",
+              "items": {
+                "enum": [
+                  "blocking_modal", "no_loading_state", "no_error_state", "no_empty_state",
+                  "no_back_affordance", "hidden_cta", "long_form", "forced_signup",
+                  "unskippable", "destructive_no_confirm", "silent_failure",
+                  "duplicate_input", "external_handoff", "permission_prompt"
+                ]
+              }
+            },
+            "evidence": {
+              "type": "array",
+              "description": "Extra source anchors backing the friction claims.",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "label": { "type": "string" },
+        "kind": {
+          "enum": ["happy", "error", "edge", "back", "neutral"],
+          "default": "neutral",
+          "description": "back = returning/cancel transition; excluded from depth metrics and from layering."
+        },
+        "condition": { "type": "string", "description": "Guard expression as it appears in code, e.g. 'session == null'." },
+        "source": { "type": "string" }
+      }
+    }
+  }
+}

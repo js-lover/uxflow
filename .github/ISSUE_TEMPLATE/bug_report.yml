@@ -1,0 +1,45 @@
+name: Bug report
+description: Something in uxflow behaves incorrectly
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      render: shell
+      placeholder: python3 scripts/uxflow.py render docs/ux-flows/checkout.flow.json -o docs/ux-flows
+    validations:
+      required: true
+
+  - type: textarea
+    id: ir
+    attributes:
+      label: Minimal flow.json that reproduces it
+      description: >-
+        Redacted is fine — replace labels and source paths, but keep the graph shape
+        (nodes, edges, types, kinds, lanes). The shape is almost always where the bug is.
+      render: json
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.11.4"
+    validations:
+      required: true
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback or output
+      render: shell

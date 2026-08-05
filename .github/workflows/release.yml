@@ -1,0 +1,40 @@
+# Builds the installable .skill bundle and attaches it to a GitHub release.
+# Trigger:  git tag v1.0.0 && git push origin v1.0.0
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Tests must pass before we ship
+        run: python3 -m unittest discover -s tests
+
+      - name: Build uxflow.skill
+        run: |
+          rm -rf build && mkdir -p build/uxflow
+          cp -r SKILL.md AGENTS.md README.md LICENSE \
+                schema scripts references examples tests build/uxflow/
+          rm -rf build/uxflow/examples/output build/uxflow/examples/preview
+          find build -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+          cd build && zip -qr ../uxflow.skill uxflow
+          cd .. && unzip -l uxflow.skill
+
+      - name: Attach to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: uxflow.skill
+          generate_release_notes: true

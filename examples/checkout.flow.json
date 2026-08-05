@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "id": "checkout",
+  "title": "Guest checkout",
+  "description": "From cart to order confirmation for a user who is not signed in.",
+  "app": { "name": "Example Shop", "stack": "nextjs", "commit": "a1b2c3d" },
+  "direction": "TD",
+  "lanes": [
+    { "id": "user", "label": "User" },
+    { "id": "ui", "label": "App UI" },
+    { "id": "api", "label": "Backend" }
+  ],
+  "nodes": [
+    { "id": "start", "type": "start", "label": "Taps Checkout in cart", "lane": "user", "kind": "happy" },
+
+    { "id": "cart", "type": "screen", "label": "Cart", "lane": "ui", "kind": "happy",
+      "route": "/cart", "source": "src/app/cart/page.tsx:18",
+      "annotations": { "taps": 1 } },
+
+    { "id": "auth-gate", "type": "decision", "label": "Signed in?", "lane": "ui", "kind": "happy",
+      "source": "src/middleware.ts:42" },
+
+    { "id": "signup", "type": "screen", "label": "Create an account", "lane": "ui", "kind": "edge",
+      "route": "/signup", "source": "src/app/signup/page.tsx:12",
+      "annotations": {
+        "taps": 3, "required_fields": 4,
+        "note": "Guest checkout exists in the API but is not exposed in the UI.",
+        "friction": ["forced_signup", "long_form"] } },
+
+    { "id": "address", "type": "screen", "label": "Shipping address", "lane": "ui", "kind": "happy",
+      "route": "/checkout/address", "source": "src/app/checkout/address/page.tsx:30",
+      "annotations": { "taps": 2, "required_fields": 6, "friction": ["duplicate_input"],
+        "note": "Re-asks name and phone already collected at signup." } },
+
+    { "id": "shipping-api", "type": "api", "label": "POST /api/shipping/quote", "lane": "api",
+      "kind": "happy", "source": "src/app/api/shipping/quote/route.ts:8",
+      "annotations": { "wait": "full-screen spinner, p95 1.4s" } },
+
+    { "id": "shipping-error", "type": "state", "label": "Quote failed", "lane": "ui", "kind": "error",
+      "source": "src/app/checkout/address/page.tsx:88",
+      "annotations": { "friction": ["silent_failure"],
+        "note": "catch block logs to console; the user sees the spinner stop and nothing else." } },
+
+    { "id": "payment", "type": "screen", "label": "Payment", "lane": "ui", "kind": "happy",
+      "route": "/checkout/payment", "source": "src/app/checkout/payment/page.tsx:24",
+      "annotations": { "taps": 2, "required_fields": 4, "friction": ["no_back_affordance"] } },
+
+    { "id": "psp", "type": "external", "label": "3-D Secure (bank page)", "lane": "api", "kind": "happy",
+      "source": "src/lib/psp/redirect.ts:15",
+      "annotations": { "friction": ["external_handoff"] } },
+
+    { "id": "charge", "type": "api", "label": "POST /api/orders", "lane": "api", "kind": "happy",
+      "source": "src/app/api/orders/route.ts:11" },
+
+    { "id": "orders-db", "type": "data", "label": "orders table", "lane": "api", "kind": "neutral",
+      "source": "prisma/schema.prisma:60" },
+
+    { "id": "declined", "type": "screen", "label": "Payment declined", "lane": "ui", "kind": "error",
+      "route": "/checkout/declined", "source": "src/app/checkout/declined/page.tsx:9",
+      "annotations": { "friction": ["no_back_affordance"],
+        "note": "No retry button; the cart is already cleared at this point." } },
+
+    { "id": "confirm", "type": "screen", "label": "Order confirmed", "lane": "ui", "kind": "happy",
+      "route": "/checkout/success", "source": "src/app/checkout/success/page.tsx:14" },
+
+    { "id": "done", "type": "end", "label": "Order placed", "lane": "user", "kind": "happy" },
+
+    { "id": "promo-modal", "type": "modal", "label": "Newsletter offer", "lane": "ui", "kind": "edge",
+      "source": "src/components/PromoModal.tsx:20",
+      "annotations": { "taps": 1, "friction": ["blocking_modal", "unskippable"],
+        "note": "Mounted on /checkout/payment after 4s. No dismiss on Escape." } }
+  ],
+  "edges": [
+    { "from": "start", "to": "cart", "kind": "happy" },
+    { "from": "cart", "to": "auth-gate", "label": "Checkout", "kind": "happy" },
+    { "from": "auth-gate", "to": "address", "label": "yes", "kind": "happy", "condition": "session != null" },
+    { "from": "auth-gate", "to": "signup", "label": "no", "kind": "edge", "condition": "session == null" },
+    { "from": "signup", "to": "address", "label": "account created", "kind": "edge" },
+    { "from": "address", "to": "shipping-api", "label": "Continue", "kind": "happy" },
+    { "from": "shipping-api", "to": "payment", "label": "200", "kind": "happy" },
+    { "from": "shipping-api", "to": "shipping-error", "label": "5xx / timeout", "kind": "error" },
+    { "from": "payment", "to": "promo-modal", "label": "after 4s", "kind": "edge" },
+    { "from": "promo-modal", "to": "payment", "label": "dismiss", "kind": "back" },
+    { "from": "payment", "to": "psp", "label": "Pay", "kind": "happy" },
+    { "from": "psp", "to": "charge", "label": "authorised", "kind": "happy" },
+    { "from": "psp", "to": "declined", "label": "rejected", "kind": "error" },
+    { "from": "charge", "to": "orders-db", "label": "insert", "kind": "neutral" },
+    { "from": "charge", "to": "confirm", "label": "201", "kind": "happy" },
+    { "from": "confirm", "to": "done", "kind": "happy" },
+    { "from": "payment", "to": "address", "label": "back", "kind": "back" }
+  ]
+}
