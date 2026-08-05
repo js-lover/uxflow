@@ -31,38 +31,10 @@ def _adjacency(doc):
     return out, inc
 
 
-def _back_edges(out, starts, node_ids):
-    """Iterative DFS colouring; returns the set of edges that close a cycle."""
-    color = dict.fromkeys(node_ids, 0)     # 0 white, 1 grey, 2 black
-    found = set()
-    roots = list(starts) + [n for n in node_ids if n not in starts]
-    for root in roots:
-        if color[root]:
-            continue
-        color[root] = 1
-        stack = [(root, iter(out[root]))]
-        while stack:
-            node, it = stack[-1]
-            pushed = False
-            for nxt in it:
-                c = color.get(nxt, 0)
-                if c == 1:
-                    found.add((node, nxt))
-                elif c == 0:
-                    color[nxt] = 1
-                    stack.append((nxt, iter(out[nxt])))
-                    pushed = True
-                    break
-            if not pushed:
-                color[node] = 2
-                stack.pop()
-    return found
-
-
 def _rank(doc, out, inc, starts):
     """Longest-path layering on the DAG obtained after removing back edges."""
     ids = [n["id"] for n in doc["nodes"]]
-    back = _back_edges(out, starts, ids)
+    back = ir.back_edges(out, starts)
     dag_out = {k: [v for v in vs if (k, v) not in back] for k, vs in out.items()}
     dag_in = {k: [] for k in ids}
     for a, vs in dag_out.items():
@@ -140,6 +112,13 @@ def compute(doc, annotated=True):
 
     lanes = doc.get("lanes") or []
     horizontal = doc.get("direction", "TD") == "LR"
+
+    # For LR we lay the graph out in transposed space -- ranks still run "down",
+    # but every box is turned on its side first -- and then transpose the result.
+    # Packing with the real widths and transposing only the coordinates would
+    # space nodes 74px apart along an axis where they are 210px wide.
+    if horizontal:
+        size = {k: (h, w) for k, (w, h) in size.items()}
 
     if lanes:
         geom, lane_boxes, w, h = _lane_layout(doc, by_rank, rank, size, idx, lanes)
@@ -228,6 +207,7 @@ def _lane_layout(doc, by_rank, rank, size, idx, lanes):
 
 
 def _transpose(geom, lane_boxes, w, h):
-    ng = {k: {"x": v["y"], "y": v["x"], "w": v["w"], "h": v["h"]} for k, v in geom.items()}
+    """Mirror the layout across the diagonal. Sizes swap back to their real values."""
+    ng = {k: {"x": v["y"], "y": v["x"], "w": v["h"], "h": v["w"]} for k, v in geom.items()}
     nl = [dict(b, x=b["y"], y=b["x"], w=b["h"], h=b["w"]) for b in lane_boxes]
     return ng, nl, h, w

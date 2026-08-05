@@ -148,6 +148,63 @@ def index(doc):
     return doc.get("_index") or {n["id"]: n for n in doc["nodes"]}
 
 
+# -------------------------------------------------------------------- graph utils
+def back_edges(adj, starts=()):
+    """DFS-classify the edges that close a cycle in `adj` ({id: [id, ...]}).
+
+    Shared by the layout (which must layer a DAG) and the audit (which must walk
+    the primary path without looping). Iterative on purpose: a deep flow would
+    otherwise hit Python's recursion limit.
+    """
+    colour = {k: 0 for k in adj}            # 0 white, 1 grey, 2 black
+    found = set()
+    roots = [s for s in starts if s in colour]
+    roots += [k for k in sorted(adj) if k not in roots]
+    for root in roots:
+        if colour[root]:
+            continue
+        colour[root] = 1
+        stack = [(root, iter(adj[root]))]
+        while stack:
+            node, it = stack[-1]
+            pushed = False
+            for nxt in it:
+                c = colour.get(nxt, 0)
+                if c == 1:
+                    found.add((node, nxt))
+                elif c == 0:
+                    colour[nxt] = 1
+                    stack.append((nxt, iter(adj.get(nxt, []))))
+                    pushed = True
+                    break
+            if not pushed:
+                colour[node] = 2
+                stack.pop()
+    return found
+
+
+def topo_order(dag):
+    """Kahn's algorithm with deterministic tie-breaking. `dag` must be acyclic."""
+    indeg = {k: 0 for k in dag}
+    for vs in dag.values():
+        for v in vs:
+            indeg[v] = indeg.get(v, 0) + 1
+    queue = sorted(k for k in dag if indeg.get(k, 0) == 0)
+    order = []
+    while queue:
+        node = queue.pop(0)
+        order.append(node)
+        for nxt in dag.get(node, []):
+            indeg[nxt] -= 1
+            if indeg[nxt] == 0:
+                queue.append(nxt)
+                queue.sort()
+    for k in sorted(dag):                   # safety net for pathological input
+        if k not in order:
+            order.append(k)
+    return order
+
+
 # ------------------------------------------------------------------------ hashing
 def content_hash(doc):
     """Stable hash over the semantic content only -- used by `uxflow check`."""

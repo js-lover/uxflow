@@ -89,11 +89,25 @@ def to_markdown(before, after, summary):
         d = ma[k] - mb[k]
         arrow = "±0" if d == 0 else ("%+d" % d)
         out.append("| %s | %s | %s | %s |" % (k.replace("_", " "), mb[k], ma[k], arrow))
+
+    # severity counts belong to the same table -- a blank line here would drop
+    # them out of it and render them as literal pipe-separated text
+    for sev in ("high", "medium", "low"):
+        cb = len([f for f in rb["findings"] if f["severity"] == sev])
+        ca = len([f for f in ra["findings"] if f["severity"] == sev])
+        d = ca - cb
+        out.append("| %s-severity findings | %d | %d | %s |"
+                   % (sev, cb, ca, "±0" if d == 0 else "%+d" % d))
     out.append("")
 
-    hb = len([f for f in rb["findings"] if f["severity"] == "high"])
-    ha = len([f for f in ra["findings"] if f["severity"] == "high"])
-    out += ["| high-severity findings | %d | %d | %s |" % (hb, ha, "±0" if ha == hb else "%+d" % (ha - hb)), ""]
+    resolved = {(f["code"], f["node"]) for f in rb["findings"]} - {(f["code"], f["node"]) for f in ra["findings"]}
+    introduced = {(f["code"], f["node"]) for f in ra["findings"]} - {(f["code"], f["node"]) for f in rb["findings"]}
+    if resolved:
+        out += ["## Findings resolved", ""]
+        out += ["- `%s` on `%s`" % (c, n or "(flow)") for c, n in sorted(resolved)] + [""]
+    if introduced:
+        out += ["## Findings introduced", ""]
+        out += ["- `%s` on `%s`" % (c, n or "(flow)") for c, n in sorted(introduced)] + [""]
 
     if summary["added"]:
         out += ["## Added", ""] + ["- **%s** (`%s`)" % (n["label"], n["id"]) for n in summary["added"]] + [""]

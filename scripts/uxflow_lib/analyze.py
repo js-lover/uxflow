@@ -11,7 +11,6 @@ SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 
 
 def audit(doc, max_depth=6):
-    idx = ir.index(doc)
     out, inc = {}, {}
     for n in doc["nodes"]:
         out[n["id"]] = []
@@ -105,10 +104,6 @@ def audit(doc, max_depth=6):
                            "The primary path is %d steps long (threshold %d). "
                            "Each extra step compounds drop-off." % (depth, max_depth)))
 
-    # -------------------------------------------------------------------- cycles
-    for e in doc["edges"]:
-        if e.get("kind") == "back":
-            continue
     metrics = _metrics(doc, depth, path, seen)
     findings.sort(key=lambda f: (SEVERITY_ORDER[f["severity"]], f["node"]))
     return {"findings": findings, "metrics": metrics, "primary_path": path}
@@ -123,30 +118,52 @@ def _f(code, severity, node_id, node, message):
     }
 
 
-def _longest_happy_path(starts, out, ends):
-    """Longest simple forward path, preferring happy edges. Bounded DFS."""
-    best = (0, [])
-    limit = 20000
-    budget = [limit]
+def _longest_happy_path(starts, out, ends=None):
+    """Longest forward path from a start node, preferring happy edges.
 
-    def walk(node, path, seen):
-        budget[0] -= 1
-        if budget[0] <= 0:
-            return
-        nonlocal best
-        forward = [e for e in out[node] if e.get("kind") != "back" and e["to"] not in seen]
+    Two reductions make this exact and linear instead of an exponential walk over
+    every simple path:
+
+      1. per-node happy preference -- a node with at least one `happy` successor
+         keeps only those. That is what makes the result *the primary path*
+         rather than merely the longest one;
+      2. back edges (explicit `kind: back`, plus whatever cycles survive step 1)
+         are removed, leaving a DAG on which longest-path is a single pass in
+         topological order.
+
+    The previous implementation enumerated simple paths under a fixed visit
+    budget, so a branchy flow would exhaust the budget and silently return a
+    truncated depth. Results are unchanged for graphs small enough that the old
+    search completed.
+    """
+    adj = {}
+    for nid, edges in out.items():
+        forward = [e for e in edges if e.get("kind") != "back"]
         happy = [e for e in forward if e.get("kind") == "happy"]
-        candidates = happy or forward
-        if not candidates:
-            if len(path) > best[0]:
-                best = (len(path), list(path))
-            return
-        for e in candidates:
-            walk(e["to"], path + [e["to"]], seen | {e["to"]})
+        adj[nid] = sorted({e["to"] for e in (happy or forward)})
 
-    for s in starts:
-        walk(s, [s], {s})
-    return best[0] - 1 if best[0] else 0, best[1]
+    back = ir.back_edges(adj, starts)
+    dag = {k: [v for v in vs if (k, v) not in back] for k, vs in adj.items()}
+
+    reachable = {s: 0 for s in starts if s in dag}
+    if not reachable:
+        return 0, []
+
+    prev = {}
+    for node in ir.topo_order(dag):
+        if node not in reachable:
+            continue
+        for nxt in dag.get(node, []):
+            if reachable[node] + 1 > reachable.get(nxt, -1):
+                reachable[nxt] = reachable[node] + 1
+                prev[nxt] = node
+
+    end = max(sorted(reachable), key=lambda n: reachable[n])
+    path = [end]
+    while path[-1] in prev:
+        path.append(prev[path[-1]])
+    path.reverse()
+    return len(path) - 1, path
 
 
 def _metrics(doc, depth, path, reachable):

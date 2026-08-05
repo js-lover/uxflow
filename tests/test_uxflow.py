@@ -110,15 +110,34 @@ class TestLayout(unittest.TestCase):
         self.doc = ir.load(EXAMPLE)
         self.lay = layout.compute(self.doc, annotated=True)
 
-    def test_no_overlapping_nodes(self):
-        g = self.lay["nodes"]
+    def _assert_no_overlap(self, lay, where):
+        g = lay["nodes"]
         ids = list(g)
         for i in range(len(ids)):
             for j in range(i + 1, len(ids)):
                 a, b = g[ids[i]], g[ids[j]]
                 overlap = (a["x"] < b["x"] + b["w"] and b["x"] < a["x"] + a["w"] and
                            a["y"] < b["y"] + b["h"] and b["y"] < a["y"] + a["h"])
-                self.assertFalse(overlap, "%s overlaps %s" % (ids[i], ids[j]))
+                self.assertFalse(overlap, "%s overlaps %s (%s)" % (ids[i], ids[j], where))
+
+    def test_no_overlapping_nodes(self):
+        self._assert_no_overlap(self.lay, "TD")
+
+    def test_no_overlapping_nodes_lr(self):
+        """LR laid out with untransposed box sizes used to overlap: the packer
+        spaced siblings by their height while they were still full width."""
+        doc = ir.load(EXAMPLE)
+        doc["direction"] = "LR"
+        self._assert_no_overlap(layout.compute(doc, annotated=True), "LR")
+
+    def test_box_sizes_are_direction_independent(self):
+        doc = ir.load(EXAMPLE)
+        doc["direction"] = "LR"
+        lr = layout.compute(doc, annotated=True)
+        for node in doc["nodes"]:
+            w, h = ir.node_size(node, True)
+            geom = lr["nodes"][node["id"]]
+            self.assertEqual((geom["w"], geom["h"]), (w, h), node["id"])
 
     def test_every_node_positioned(self):
         self.assertEqual(set(self.lay["nodes"]), {n["id"] for n in self.doc["nodes"]})
@@ -258,6 +277,50 @@ class TestAudit(unittest.TestCase):
     def test_findings_carry_source_anchors(self):
         with_source = [f for f in self.report["findings"] if f["node"] and f["label"]]
         self.assertTrue(any(f["source"] for f in with_source))
+
+    def test_primary_path_is_exact_on_a_branchy_graph(self):
+        """A wide subgraph explored first must not hide a deeper branch.
+
+        The earlier path search enumerated simple paths under a fixed visit
+        budget; a fan-out big enough to exhaust it made the search return a
+        truncated depth without saying so. The layered search is exact.
+        """
+        doc = minimal()
+        doc["nodes"] = [n for n in doc["nodes"] if n["type"] == "start"]
+        doc["edges"] = []
+        start = doc["nodes"][0]["id"]
+
+        def screen(nid):
+            n = {"id": nid, "type": "screen", "label": nid, "lane": "ui",
+                 "kind": "happy", "source": "src/x.tsx:1", "annotations": {}}
+            doc["nodes"].append(n)
+            return nid
+
+        # wide branch: 18-node complete forward DAG, ~65k simple paths, depth 18
+        wide = [screen("w%02d" % i) for i in range(18)]
+        doc["edges"].append({"from": start, "to": wide[0], "kind": "happy"})
+        for i in range(len(wide)):
+            for j in range(i + 1, len(wide)):
+                doc["edges"].append({"from": wide[i], "to": wide[j], "kind": "happy"})
+        # deep branch: a plain 40-step chain, declared second
+        deep = [screen("d%02d" % i) for i in range(40)]
+        doc["edges"].append({"from": start, "to": deep[0], "kind": "happy"})
+        for i in range(len(deep) - 1):
+            doc["edges"].append({"from": deep[i], "to": deep[i + 1], "kind": "happy"})
+        doc["_index"] = {n["id"]: n for n in doc["nodes"]}
+
+        report = analyze.audit(doc)
+        self.assertEqual(report["metrics"]["primary_path_steps"], len(deep))
+        self.assertEqual(report["primary_path"][-1], deep[-1])
+
+    def test_primary_path_prefers_happy_edges(self):
+        doc = minimal()
+        doc["_index"] = {n["id"]: n for n in doc["nodes"]}
+        report = analyze.audit(doc)
+        kinds = {(e["from"], e["to"]): e.get("kind") for e in doc["edges"]}
+        path = report["primary_path"]
+        walked = [kinds.get((a, b)) for a, b in zip(path, path[1:])]
+        self.assertNotIn("back", walked)
 
 
 class TestDiff(unittest.TestCase):

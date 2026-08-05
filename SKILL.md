@@ -152,8 +152,16 @@ Useful switches:
 | `--fail-on-high` | exit 1 when a high-severity finding exists (CI) |
 | `--no-audit` | skip the audit pass |
 
-Outputs per flow: `<id>.annotated.drawio`, `<id>.clean.drawio`, `.mmd`, `.svg`, and
-`<id>.findings.md`. A `.uxflow.lock.json` records the IR hash for `check`.
+Outputs per flow: with the default `--variant both` you get `<id>.annotated.drawio`,
+`<id>.clean.drawio`, `.mmd`, `.svg` and `<id>.findings.md`. Asking for a single variant drops
+the infix — `--variant clean` writes `<id>.drawio`, not `<id>.clean.drawio`. A
+`.uxflow.lock.json` records the IR hash for `check`.
+
+`uxflow.py audit <flow>` prints the findings to stdout without writing anything (pass `-o DIR`
+to write `findings.md` instead) — useful while you are still iterating on the IR.
+
+`uxflow.py init <flow-id> -o docs/ux-flows` scaffolds a minimal, valid IR file if you would
+rather start from a skeleton than a blank page.
 
 ### Phase 6 — Report back
 
@@ -163,7 +171,7 @@ Summarise in the user's language:
 - the high-severity findings, each with its file:line
 - where the files are, and how to open them (`.drawio` → drag into
   [app.diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension;
-  `.mmd` renders inline in GitHub Markdown)
+  `.mmd` renders inline in GitHub Markdown; `.svg` opens in any browser)
 
 Then offer the follow-ups the user probably wants:
 
@@ -179,14 +187,18 @@ This is the feature that makes the diagrams a design tool rather than documentat
 
 ```bash
 cp docs/ux-flows/checkout.flow.json docs/ux-flows/checkout-proposed.flow.json
-# edit the proposed file: remove steps, add error branches, merge screens
+# edit the proposed file: give it a new `id`, then
+# remove steps, add error branches, merge screens
 python3 scripts/uxflow.py diff docs/ux-flows/checkout.flow.json \
                                docs/ux-flows/checkout-proposed.flow.json \
                                -o docs/ux-flows
 ```
 
-Produces `checkout-diff.drawio/.mmd/.svg` colour-coded added / removed / changed, plus
-`checkout-diff.md` with the metric delta (steps, taps, required fields, unhandled errors).
+Output is named after the *second* file plus `-diff`, so this writes
+`checkout-proposed-diff.drawio/.mmd/.svg`, colour-coded added / removed / changed, plus
+`checkout-proposed-diff.md` with the metric delta (steps, screens, taps, required fields,
+error branches, findings per severity) and the list of findings the redesign resolves or
+introduces.
 
 **Keep node ids identical between the two files for anything that survives the redesign** —
 that is how the diff knows a screen was *changed* rather than *replaced*.

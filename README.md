@@ -104,6 +104,9 @@ From `examples/`, that produces:
 | friction tags | 9 | 1 | **−8** |
 | high-severity findings | 7 | 0 | **−7** |
 
+…followed by the individual findings the redesign **resolves** and any it **introduces**, each
+by code and node id.
+
 That table is a design argument you can take to a stakeholder. The colour-coded diff diagram
 (added / removed / changed) is the picture that goes with it.
 

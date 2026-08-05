@@ -23,8 +23,24 @@
 | api calls | 2 | 2 | ±0 |
 | error branches | 2 | 6 | +4 |
 | friction tags | 9 | 1 | -8 |
-
 | high-severity findings | 7 | 0 | -7 |
+| medium-severity findings | 2 | 1 | -1 |
+| low-severity findings | 5 | 1 | -4 |
+
+## Findings resolved
+
+- `deadend` on `declined`
+- `deadend` on `shipping-error`
+- `friction:blocking_modal` on `promo-modal`
+- `friction:duplicate_input` on `address`
+- `friction:forced_signup` on `signup`
+- `friction:long_form` on `signup`
+- `friction:no_back_affordance` on `declined`
+- `friction:no_back_affordance` on `payment`
+- `friction:silent_failure` on `shipping-error`
+- `friction:unskippable` on `promo-modal`
+- `no_back` on `declined`
+- `no_error_branch` on `charge`
 
 ## Added
 
