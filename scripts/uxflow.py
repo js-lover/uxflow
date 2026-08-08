@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
-"""uxflow -- deterministic UX flow diagram generator.
+"""uxflow -- deterministic UX flow diagram generator and static UX audit.
 
 Usage
-  uxflow.py validate  <flow.json>...
-  uxflow.py render    <flow.json>... [-o DIR] [--variant both|annotated|clean]
-                                     [--formats drawio,mermaid,svg,md] [--no-audit]
-  uxflow.py audit     <flow.json>... [-o DIR]
-  uxflow.py diff      <before.json> <after.json> [-o DIR]
-  uxflow.py check     <flow.json>... [-o DIR]
-  uxflow.py init      <flow-id> [-o DIR]
-  uxflow.py id        <route> [component]
+  uxflow.py validate <flow.json>...
+  uxflow.py render   <flow.json>... [-o DIR] [--formats drawio,md,svg,mermaid]
+                                    [--fail-on-high]
+  uxflow.py audit    <flow.json>... [-o DIR] [--fail-on-high]
+  uxflow.py diff     <before.json> <after.json> [-o DIR]
+  uxflow.py check    <flow.json>... [-o DIR]
+  uxflow.py ignore   <FINDING-ID>... [--reason TEXT]
+  uxflow.py init     <flow-id> [-o DIR]
+  uxflow.py id       <route> [component]
+
+Default output per flow (3 files):
+  <id>.flow.json   the IR you edit
+  <id>.drawio      multi-page: [Akış] [Akış + notlar] (+ [Değişim] after a diff)
+  <id>.md          the report, with the diagram embedded as Mermaid
 
 No third-party packages. Python 3.8+.
 """
@@ -22,10 +28,13 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from uxflow_lib import analyze, diffing, drawio, ir, layout, mermaid, svg  # noqa: E402
+from uxflow_lib import (analyze, diffing, drawio, ir, layout,  # noqa: E402
+                        mermaid, report, svg)
 
 LOCK = ".uxflow.lock.json"
-ALL_FORMATS = ["drawio", "mermaid", "svg", "md"]
+IGNORE = ".uxflowignore"
+ALL_FORMATS = ["drawio", "md", "svg", "mermaid"]
+DEFAULT_FORMATS = "drawio,md"
 
 
 # --------------------------------------------------------------------- helpers
@@ -40,7 +49,7 @@ def _write(path, text, quiet=False):
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(text)
     if not quiet:
-        print("  wrote %s" % os.path.relpath(path))
+        print("  %s" % os.path.relpath(path))
     return path
 
 
@@ -77,58 +86,110 @@ def _write_lock(outdir, data):
         fh.write("\n")
 
 
+# ------------------------------------------------------------------ suppression
+def _ignore_file(start="."):
+    """Walk up from `start` looking for .uxflowignore, like .gitignore."""
+    cur = os.path.abspath(start)
+    while True:
+        cand = os.path.join(cur, IGNORE)
+        if os.path.exists(cand):
+            return cand
+        parent = os.path.dirname(cur)
+        if parent == cur:
+            return os.path.join(os.path.abspath(start), IGNORE)
+        cur = parent
+
+
+def _read_ignore(start="."):
+    path = _ignore_file(start)
+    ids = set()
+    if not os.path.exists(path):
+        return ids
+    with open(path, "r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.split("#", 1)[0].strip()
+            if line:
+                ids.add(line.split()[0])
+    return ids
+
+
+def cmd_ignore(args):
+    path = _ignore_file(".")
+    existing = _read_ignore(".")
+    new = [i for i in args.ids if i not in existing]
+    if not new:
+        print("Zaten bastırılmış: %s" % ", ".join(args.ids))
+        return 0
+    fresh = not os.path.exists(path)
+    with open(path, "a", encoding="utf-8") as fh:
+        if fresh:
+            fh.write("# uxflow -- kabul edilmiş bulgular.\n"
+                     "# Her satır bir bulgu id'si. Gerekçeyi yanına yaz; rapora yansır.\n\n")
+        for i in new:
+            fh.write("%s%s\n" % (i, ("  # " + args.reason) if args.reason else ""))
+    print("%s dosyasına eklendi: %s" % (os.path.relpath(path), ", ".join(new)))
+    return 0
+
+
 # -------------------------------------------------------------------- commands
 def cmd_validate(args):
-    docs = _load(args.flows)
-    for path, doc in docs:
-        print("OK   %s  (%d nodes, %d edges, hash %s)"
+    for path, doc in _load(args.flows):
+        print("OK   %s  (%d düğüm, %d geçiş, hash %s)"
               % (path, len(doc["nodes"]), len(doc["edges"]), ir.content_hash(doc)))
     return 0
 
 
+def _pages_for(doc):
+    """Clean page first -- it is the one people show to other people."""
+    clean_lay = layout.compute(doc, annotated=False)
+    annot_lay = layout.compute(doc, annotated=True)
+    return [
+        {"name": "Akış", "doc": doc, "layout": clean_lay,
+         "annotated": False, "mode": "normal", "legend": True},
+        {"name": "Akış + notlar", "doc": doc, "layout": annot_lay,
+         "annotated": True, "mode": "normal", "legend": True},
+    ]
+
+
 def cmd_render(args):
     outdir = _ensure(args.out or "docs/ux-flows")
-    formats = [f.strip() for f in args.formats.split(",") if f.strip()]
+    formats = [f.strip() for f in (args.formats or DEFAULT_FORMATS).split(",") if f.strip()]
     bad = [f for f in formats if f not in ALL_FORMATS]
     if bad:
-        print("unknown format(s): %s" % ", ".join(bad), file=sys.stderr)
+        print("bilinmeyen format: %s" % ", ".join(bad), file=sys.stderr)
         return 2
+    if getattr(args, "variant", None):
+        print("uyarı: --variant kaldırıldı. Her iki görünüm artık .drawio dosyasının "
+              "sekmelerinde. Bayrak yok sayıldı.", file=sys.stderr)
 
-    variants = {"both": ["annotated", "clean"],
-                "annotated": ["annotated"], "clean": ["clean"]}[args.variant]
-
+    suppressed = _read_ignore(outdir)
     lock = _read_lock(outdir)
     exit_code = 0
+
     for path, doc in _load(args.flows):
-        print("%s -> %s" % (path, outdir))
-        report = None
-        if not args.no_audit:
-            report = analyze.audit(copy.deepcopy(doc))
-            # re-run on the live doc so `_problem` markers land on the rendered nodes
-            analyze.audit(doc)
+        print("%s" % path)
+        rep = analyze.audit(doc, suppressed=suppressed)
+        base = os.path.join(outdir, doc["id"])
 
-        for variant in variants:
-            annotated = variant == "annotated"
-            suffix = "" if len(variants) == 1 and args.variant != "both" else "." + variant
-            lay = layout.compute(doc, annotated=annotated)
-            base = os.path.join(outdir, doc["id"] + suffix)
-            if "drawio" in formats:
-                _write(base + ".drawio", drawio.render(doc, lay, annotated=annotated))
-            if "mermaid" in formats:
-                _write(base + ".mmd", mermaid.render(doc, annotated=annotated))
-            if "svg" in formats:
-                _write(base + ".svg", svg.render(doc, lay, annotated=annotated))
+        if "drawio" in formats:
+            _write(base + ".drawio", drawio.render_pages(_pages_for(doc)))
+        if "md" in formats:
+            _write(base + ".md", report.render(doc, rep,
+                                               embed_diagram="mermaid" not in formats or True))
+        if "mermaid" in formats:
+            _write(base + ".mmd", mermaid.render(doc, annotated=True))
+        if "svg" in formats:
+            lay = layout.compute(doc, annotated=True)
+            _write(base + ".svg", svg.render(doc, lay, annotated=True))
 
-        if "md" in formats and report:
-            _write(os.path.join(outdir, doc["id"] + ".findings.md"),
-                   analyze.to_markdown(doc, report))
-
-        if report:
-            highs = [f for f in report["findings"] if f["severity"] == "high"]
-            print("  %d finding(s), %d high severity, primary path %d steps"
-                  % (len(report["findings"]), len(highs), report["metrics"]["primary_path_steps"]))
-            if args.fail_on_high and highs:
-                exit_code = 1
+        highs = [f for f in rep["findings"] if f["severity"] == "high"]
+        print("  → %d bulgu (%d yüksek), ana yol %d adım, %d çıkmaz"
+              % (len(rep["findings"]), len(highs),
+                 rep["metrics"]["primary_path_steps"], rep["metrics"]["failure_exits"]))
+        if rep["suppressed"]:
+            print("  → %d bulgu bastırılmış (.uxflowignore)" % len(rep["suppressed"]))
+        if args.fail_on_high and highs:
+            exit_code = 1
 
         lock[doc["id"]] = {"hash": ir.content_hash(doc), "source": os.path.relpath(path)}
 
@@ -138,15 +199,16 @@ def cmd_render(args):
 
 def cmd_audit(args):
     outdir = args.out
+    suppressed = _read_ignore(outdir or ".")
     worst = 0
     for path, doc in _load(args.flows):
-        report = analyze.audit(doc)
-        md = analyze.to_markdown(doc, report)
+        rep = analyze.audit(doc, suppressed=suppressed)
+        md = report.render(doc, rep, embed_diagram=False)
         if outdir:
-            _write(os.path.join(_ensure(outdir), doc["id"] + ".findings.md"), md)
+            _write(os.path.join(_ensure(outdir), doc["id"] + ".md"), md)
         else:
             print(md)
-        if any(f["severity"] == "high" for f in report["findings"]):
+        if any(f["severity"] == "high" for f in rep["findings"]):
             worst = 1
     return worst if args.fail_on_high else 0
 
@@ -155,13 +217,21 @@ def cmd_diff(args):
     outdir = _ensure(args.out or "docs/ux-flows")
     (_, before), (_, after) = _load([args.before, args.after])
     merged, summary = diffing.diff(before, after)
-    lay = layout.compute(merged, annotated=True)
-    base = os.path.join(outdir, merged["id"])
-    _write(base + ".drawio", drawio.render(merged, lay, annotated=True, mode="diff"))
-    _write(base + ".mmd", mermaid.render(merged, annotated=True, mode="diff"))
-    _write(base + ".svg", svg.render(merged, lay, annotated=True, mode="diff"))
-    _write(base + ".md", diffing.to_markdown(before, after, summary))
-    print("  +%d / -%d / ~%d nodes"
+
+    pages = _pages_for(after)
+    pages.append({"name": "Değişim", "doc": merged,
+                  "layout": layout.compute(merged, annotated=True),
+                  "annotated": True, "mode": "diff", "legend": True})
+    base = os.path.join(outdir, after["id"])
+    print("%s → %s" % (before["id"], after["id"]))
+    _write(base + ".drawio", drawio.render_pages(pages))
+
+    rep = analyze.audit(after, suppressed=_read_ignore(outdir))
+    body = report.render(after, rep)
+    body += "\n" + diffing.to_markdown(before, after, summary)
+    _write(base + ".md", body)
+
+    print("  → +%d / -%d / ~%d düğüm"
           % (len(summary["added"]), len(summary["removed"]), len(summary["changed"])))
     return 0
 
@@ -169,18 +239,26 @@ def cmd_diff(args):
 def cmd_check(args):
     outdir = args.out or "docs/ux-flows"
     lock = _read_lock(outdir)
-    stale = []
+    stale, legacy = [], []
     for path, doc in _load(args.flows):
         recorded = (lock.get(doc["id"]) or {}).get("hash")
         current = ir.content_hash(doc)
-        if recorded != current:
+        if recorded is None:
+            legacy.append(doc["id"])
+        elif recorded != current:
             stale.append((doc["id"], recorded, current))
-    if stale:
-        print("Diagrams are out of date. Run `uxflow render` and commit the result:", file=sys.stderr)
-        for fid, rec, cur in stale:
-            print("  %-24s locked=%s current=%s" % (fid, rec or "<none>", cur), file=sys.stderr)
+
+    if legacy:
+        print("Bu akışlar için kayıt yok (ilk çalıştırma ya da eski sürümden geçiş): %s"
+              % ", ".join(legacy), file=sys.stderr)
+        print("`uxflow render` çalıştırıp sonucu commit et.", file=sys.stderr)
         return 1
-    print("All diagrams are up to date.")
+    if stale:
+        print("Diyagramlar güncel değil. `uxflow render` çalıştırıp commit et:", file=sys.stderr)
+        for fid, rec, cur in stale:
+            print("  %-24s kayıtlı=%s güncel=%s" % (fid, rec, cur), file=sys.stderr)
+        return 1
+    print("Tüm diyagramlar güncel.")
     return 0
 
 
@@ -217,7 +295,7 @@ def cmd_init(args):
     doc["title"] = args.flow_id.replace("-", " ").replace("_", " ").title()
     path = os.path.join(outdir, args.flow_id + ".flow.json")
     if os.path.exists(path) and not args.force:
-        print("%s already exists (use --force to overwrite)" % path, file=sys.stderr)
+        print("%s zaten var (--force ile üzerine yaz)" % path, file=sys.stderr)
         return 1
     _write(path, json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
     return 0
@@ -234,43 +312,49 @@ def build_parser():
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    v = sub.add_parser("validate", help="check flow IR files against the schema rules")
+    v = sub.add_parser("validate", help="IR dosyalarını doğrula")
     v.add_argument("flows", nargs="+")
     v.set_defaults(func=cmd_validate)
 
-    r = sub.add_parser("render", help="generate .drawio / .mmd / .svg / findings.md")
+    r = sub.add_parser("render", help=".drawio + rapor üret")
     r.add_argument("flows", nargs="+")
-    r.add_argument("-o", "--out", help="output directory (default docs/ux-flows)")
-    r.add_argument("--variant", choices=["both", "annotated", "clean"], default="both")
-    r.add_argument("--formats", default="drawio,mermaid,svg,md")
-    r.add_argument("--no-audit", action="store_true", help="skip the UX audit pass")
-    r.add_argument("--fail-on-high", action="store_true", help="exit 1 if a high-severity finding exists")
+    r.add_argument("-o", "--out", help="çıktı klasörü (varsayılan docs/ux-flows)")
+    r.add_argument("--formats", default=DEFAULT_FORMATS,
+                   help="drawio,md,svg,mermaid (varsayılan: %s)" % DEFAULT_FORMATS)
+    r.add_argument("--fail-on-high", action="store_true",
+                   help="yüksek önemli bulgu varsa 1 ile çık")
+    r.add_argument("--variant", help=argparse.SUPPRESS)
     r.set_defaults(func=cmd_render)
 
-    a = sub.add_parser("audit", help="static UX audit; prints or writes findings.md")
+    a = sub.add_parser("audit", help="yalnızca rapor")
     a.add_argument("flows", nargs="+")
     a.add_argument("-o", "--out")
     a.add_argument("--fail-on-high", action="store_true")
     a.set_defaults(func=cmd_audit)
 
-    d = sub.add_parser("diff", help="before/after comparison of two flow IRs")
+    d = sub.add_parser("diff", help="öncesi/sonrası karşılaştırma")
     d.add_argument("before")
     d.add_argument("after")
     d.add_argument("-o", "--out")
     d.set_defaults(func=cmd_diff)
 
-    c = sub.add_parser("check", help="CI guard: fail if the IR changed but diagrams were not regenerated")
+    c = sub.add_parser("check", help="CI: diyagramlar IR ile senkron mu")
     c.add_argument("flows", nargs="+")
     c.add_argument("-o", "--out")
     c.set_defaults(func=cmd_check)
 
-    i = sub.add_parser("init", help="scaffold a new flow IR file")
+    g = sub.add_parser("ignore", help="bulguyu kabul et ve sustur")
+    g.add_argument("ids", nargs="+", metavar="FINDING-ID")
+    g.add_argument("--reason", help="gerekçe (dosyaya yorum olarak yazılır)")
+    g.set_defaults(func=cmd_ignore)
+
+    i = sub.add_parser("init", help="yeni IR dosyası oluştur")
     i.add_argument("flow_id")
     i.add_argument("-o", "--out")
     i.add_argument("--force", action="store_true")
     i.set_defaults(func=cmd_init)
 
-    n = sub.add_parser("id", help="mint a stable node id from a route (+ component)")
+    n = sub.add_parser("id", help="route'tan stabil düğüm id'si üret")
     n.add_argument("route")
     n.add_argument("component", nargs="?", default="")
     n.set_defaults(func=cmd_id)

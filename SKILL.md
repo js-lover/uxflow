@@ -2,50 +2,83 @@
 name: uxflow
 description: >-
   Analyse an existing web or mobile application's codebase and generate editable UX flow
-  diagrams (draw.io / .drawio, Mermaid, SVG) plus a static UX audit. Use this skill whenever
+  diagrams (draw.io / .drawio, Mermaid) plus an actionable UX audit. Use this skill whenever
   the user asks to map, chart, document, visualise or diagram user flows, user journeys,
-  screen flows, navigation graphs or "the checkout/onboarding/signup flow"; whenever they
-  ask for a flowchart or flow diagram of an app; whenever they want to find UX friction,
-  dead ends or unnecessary steps in an existing product; whenever they mention draw.io,
-  diagrams.net, Mermaid flowcharts or "akış diyagramı" in the context of an application;
-  and whenever they want a before/after comparison of a proposed UX change. Works with
-  Next.js, React, React Native, Expo, Flutter, SwiftUI, UIKit and Jetpack Compose codebases.
+  screen flows, navigation graphs or "the checkout/onboarding/signup/login flow"; whenever
+  they ask for a flowchart or flow diagram of an app; whenever they want to find UX friction,
+  dead ends, unhandled errors or unnecessary steps in an existing product; whenever they ask
+  "how does this flow actually work" about a codebase they inherited; whenever they mention
+  draw.io, diagrams.net, Mermaid flowcharts or "akış diyagramı" in the context of an
+  application; and whenever they want a before/after comparison of a proposed UX change.
+  Works with Next.js, React, React Router, React Native, Expo, Flutter, SwiftUI, UIKit and
+  Jetpack Compose codebases.
 license: MIT
 ---
 
 # uxflow
 
-Turn an application's real navigation and interaction code into **editable, version-controlled
-flow diagrams** and a **static UX audit**.
+## What this is for
 
-Two-layer design, and it matters:
+Every application has two flows: the one the designer drew, and the one the code
+actually implements. The second one is written down nowhere. Error states, empty
+states, cancel paths, permission denials — these are rarely designed. They get
+improvised while coding, or left out entirely.
+
+**uxflow extracts the second flow from the code itself.** The value is not a pretty
+diagram; it is light on the branches nobody looked at.
+
+Reach for it when the user is:
+
+| Situation | What they get |
+| --- | --- |
+| Inheriting a codebase | "How does login actually work?" answered in 20 minutes, with file:line anchors |
+| Onboarding a developer | A verifiable map instead of tribal knowledge |
+| Planning a redesign | You cannot improve what you have not mapped. Current + proposed + measured delta |
+| Reviewing a PR | "Does this add a step to checkout?" — answerable automatically |
+| Chasing a conversion drop | Analytics says *where* users leave; the flow map shows *why* they can |
+| Writing QA cases | Every branch in the diagram is a test case |
+| Producing audit documentation | Source-anchored, dated, kept in sync with the code by CI |
+
+**Say so when it does not fit.** uxflow reads existing code, so it cannot design a
+flow that has not been written yet, it says nothing about visual design, and it does
+not know what real users do — only what the code permits. It complements analytics,
+it does not replace them. Where routing is generated dynamically at runtime, the map
+will be incomplete, and the report must say so rather than guess.
+
+---
+
+## How it works
 
 | Layer | Who produces it | File |
 | --- | --- | --- |
 | **IR** — what the flow *is* | you, the agent, by reading code | `docs/ux-flows/<id>.flow.json` |
-| **Diagrams** — what it *looks like* | `scripts/uxflow.py`, deterministically | `.drawio`, `.mmd`, `.svg`, `.findings.md` |
+| **Diagram + report** | `scripts/uxflow.py`, deterministically | `<id>.drawio`, `<id>.md` |
 
-**Never hand-write `.drawio` XML or lay out coordinates yourself.** You write JSON; the
-renderer does geometry. This is what makes output reproducible across machines, agents and
+**Never hand-write `.drawio` XML or lay out coordinates.** You write JSON; the renderer
+does geometry. That is what makes output reproducible across machines, agents and
 reruns, and what keeps git diffs small.
+
+Three files per flow, no more:
+
+```
+auth-login.flow.json   the IR you edit
+auth-login.drawio      multi-page: [Akış] [Akış + notlar] (+ [Değişim] after a diff)
+auth-login.md          the report, with the diagram embedded as Mermaid
+```
 
 ---
 
 ## Non-negotiable rules
 
-1. **Every node you derive from code carries a `source` anchor** (`path/to/File.tsx:120`).
-   If you cannot point at a line, you do not know it — mark the node
-   `"kind": "edge"` and say so in `annotations.note`, or leave it out.
-2. **Never invent metrics.** `taps`, `required_fields` and friction tags must be countable in
-   the code. Do not estimate conversion rates, drop-off or timings you have not measured. Real
-   analytics numbers, if the user supplies them, go in the top-level `metrics` object.
-3. **Model what the code does, not what it should do.** Improvements belong in a separate
-   `-proposed` flow file rendered through `uxflow.py diff`.
-4. **Ask before you render.** An app has dozens of flows; the user cares about a handful.
-   Phase 2 below is mandatory.
-5. **Node ids are stable and semantic** (`checkout-payment`, not `node-7`). Regenerating a
-   diagram must not reshuffle ids. Use `python3 scripts/uxflow.py id /checkout/payment PaymentPage`
-   when in doubt.
+1. **Every node derived from code carries a `source` anchor** (`path/to/File.tsx:120`).
+   If you cannot point at a line, you do not know it — leave it out, or mark it in
+   `annotations.note` as unverified.
+2. **Never invent metrics.** `taps`, `required_fields` and friction tags must be
+   countable in the code. Do not estimate conversion or timings you have not measured.
+3. **Model what the code does, not what it should do.** Improvements belong in a
+   separate `-proposed` flow rendered through `uxflow.py diff`.
+4. **Ask before you render.** An app has dozens of flows; the user cares about a few.
+5. **Node ids are stable and semantic** (`checkout-payment`, not `node-7`).
 
 ---
 
@@ -53,180 +86,137 @@ reruns, and what keeps git diffs small.
 
 ### Phase 0 — Locate the app and the tool
 
-Confirm the repository root. Then check the runtime:
-
 ```bash
-python3 --version          # 3.8+ required; no other dependency
-python3 scripts/uxflow.py --help
+python3 --version                    # 3.8+ required; no other dependency
+python3 uxflow/scripts/uxflow.py --help
 ```
 
-If the project already has `docs/ux-flows/*.flow.json`, this is a **re-run**: read the existing
-IR first, update it in place, and preserve node ids. Do not start from scratch.
+If `docs/ux-flows/*.flow.json` already exists, this is a **re-run**: read the existing
+IR, update it in place, preserve node ids.
 
-### Phase 1 — Inventory the app (read-only, no output yet)
+### Phase 1 — Inventory the app (read-only)
 
-Detect the stack, then follow the matching playbook:
+Detect the stack, then read *only* the matching playbook:
 
 | Detected | Playbook |
 | --- | --- |
 | `next.config.*`, `app/` or `pages/` | `references/discovery-web.md` |
 | `react-navigation`, `expo-router` in `package.json` | `references/discovery-react-native.md` |
 | `pubspec.yaml` | `references/discovery-flutter.md` |
-| `*.xcodeproj`, `*.swift`, or `MainActivity.kt` + Compose | `references/discovery-native.md` |
+| `*.xcodeproj`, `*.swift`, Compose | `references/discovery-native.md` |
 
-Read only the playbook you need. Each one tells you exactly which files to grep and what the
-route/screen declarations look like.
-
-Produce an internal inventory (do not write it to disk yet):
-
-- **routes / screens** — path, component, file:line
-- **entry points** — deep links, push notification targets, tab roots, launch screen
-- **guards** — auth middleware, feature flags, paywalls, permission gates
-- **transitions** — every `router.push`, `navigate(...)`, `Navigator.push`, `NavigationLink`
-- **network calls per screen** — which endpoints a screen hits and where errors are handled
-- **states per screen** — loading, empty, error, success (note which are *missing*)
+Collect: routes/screens, entry points (deep links, notifications, tab roots), guards
+(auth, flags, paywalls), transitions, network calls per screen, and per-screen states —
+noting especially which states are **missing**.
 
 ### Phase 2 — Ask the user which flows to map  *(mandatory)*
 
-Present the candidate flows you found, grouped and named in the user's language, and ask them
-to choose. Offer sensible defaults — the flows that carry the most value in almost every app:
+Present the candidates you found, named in the user's language. Default suggestions:
+sign up / sign in, onboarding, the core value action, paywall, cancellation or account
+deletion (almost always the worst flow in the product), error and offline recovery.
 
-- sign up / sign in (including social and OTP variants)
-- onboarding / first run
-- the core value action (checkout, booking, publish, transfer — whatever this app is for)
-- paywall / subscription
-- account deletion or cancellation (almost always the worst flow in the product, and the one
-  nobody has ever drawn)
-- error and offline recovery
+Confirm in the same round: output directory (default `docs/ux-flows/`), and whether
+they want extra formats (`svg` for README embeds, `mermaid` as a standalone file).
 
-Also confirm, in the same round of questions:
-
-- **variant** — annotated, clean, or both (default: both)
-- **swimlanes** — user / UI / backend split, or a single column (default: lanes on, because
-  the user chose full depth including API calls)
-- **output directory** (default `docs/ux-flows/`)
-
-Do not proceed until the user has answered.
+Do not proceed until they answer.
 
 ### Phase 3 — Trace each selected flow
 
-For one flow at a time, walk the code from the entry point to the goal. For each step record:
+Walk from entry point to goal. For each step record the screen/state and its file:line,
+what the user must do to move on, what the app does in response, **where failure is
+handled**, and every branch: guards, validation, empty results, permission denials,
+timeouts, cancellations.
 
-- the screen or state the user is in, and its file:line
-- what the user must do to move on (and how many interactions that takes)
-- what the app does in response — including the network call and **where the failure is handled**
-- every branch: guards, validation failures, empty results, permission denials, timeouts
+Follow error paths as seriously as the happy path. Most of the value is in the branches
+nobody drew before.
 
-Follow error paths as seriously as the happy path. The value of this whole exercise is mostly
-in the branches nobody drew before.
+Pay attention to four things that are almost always missing, because they produce the
+highest-value findings:
 
-When you find a `catch` that only logs, a screen with no empty state, a modal with no dismiss,
-a destructive action with no confirm — tag it with the matching `friction` value. The tag must
-correspond to code you actually read.
+- what happens when the user **cancels** an external hand-off (OAuth, 3-D Secure, payment)
+- what happens when an out-of-band message (magic link, OTP) **never arrives**
+- whether an error carried by a redirect (`?error=...`) is actually **read** at the destination
+- whether a permission **denial** has a modelled path
 
 ### Phase 4 — Write the IR
 
-One file per flow: `docs/ux-flows/<flow-id>.flow.json`.
-
-Read `references/ir-authoring.md` for the field-by-field guide and worked examples, and
-`schema/flow.schema.json` for the exact contract. Then validate before rendering:
+One file per flow. Read `references/ir-authoring.md` for the field guide and
+`schema/flow.schema.json` for the contract. Then:
 
 ```bash
-python3 scripts/uxflow.py validate docs/ux-flows/checkout.flow.json
+python3 uxflow/scripts/uxflow.py validate docs/ux-flows/auth-login.flow.json
 ```
 
-Fix every reported problem. The validator is strict on purpose.
+Fix everything it reports. The validator is strict on purpose.
 
 ### Phase 5 — Render
 
 ```bash
-python3 scripts/uxflow.py render docs/ux-flows/*.flow.json -o docs/ux-flows
+python3 uxflow/scripts/uxflow.py render docs/ux-flows/*.flow.json -o docs/ux-flows
 ```
-
-Useful switches:
 
 | Switch | Effect |
 | --- | --- |
-| `--variant annotated\|clean\|both` | annotated carries friction + counts; clean is presentation-ready |
-| `--formats drawio,mermaid,svg,md` | pick a subset |
+| `--formats drawio,md,svg,mermaid` | default is `drawio,md` |
 | `--fail-on-high` | exit 1 when a high-severity finding exists (CI) |
-| `--no-audit` | skip the audit pass |
-
-Outputs per flow: with the default `--variant both` you get `<id>.annotated.drawio`,
-`<id>.clean.drawio`, `.mmd`, `.svg` and `<id>.findings.md`. Asking for a single variant drops
-the infix — `--variant clean` writes `<id>.drawio`, not `<id>.clean.drawio`. A
-`.uxflow.lock.json` records the IR hash for `check`.
-
-`uxflow.py audit <flow>` prints the findings to stdout without writing anything (pass `-o DIR`
-to write `findings.md` instead) — useful while you are still iterating on the IR.
-
-`uxflow.py init <flow-id> -o docs/ux-flows` scaffolds a minimal, valid IR file if you would
-rather start from a skeleton than a blank page.
 
 ### Phase 6 — Report back
 
-Summarise in the user's language:
+Read `<id>.md` and summarise it for the user in their language:
 
-- how many flows were mapped, and the primary-path step count for each
-- the high-severity findings, each with its file:line
-- where the files are, and how to open them (`.drawio` → drag into
-  [app.diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension;
-  `.mmd` renders inline in GitHub Markdown; `.svg` opens in any browser)
+- the **headline** and the **priority list** — these are the point
+- each high-severity finding with its file:line
+- where the files are: `.drawio` → drag into [app.diagrams.net](https://app.diagrams.net)
+  (second tab has the annotated view); `.md` renders with the diagram inline on GitHub
 
-Then offer the follow-ups the user probably wants:
+Then offer the follow-ups: a `-proposed` flow with a measured diff, and CI wiring.
 
-- **a proposed flow** — copy the IR to `<id>-proposed.flow.json`, apply the improvements, and
-  run `diff` to quantify them
-- **CI wiring** — `uxflow.py check` in a workflow so diagrams cannot go stale
+---
+
+## Reading the findings
+
+The diagram shows what *is*. The findings say what is *wrong*, and each one is written
+so it can be pasted into an issue tracker unchanged: what the code does, what the user
+experiences, what to change, and the evidence.
+
+Each finding has a stable id (`UXF-NOERR-0A7D`). If the team accepts one:
+
+```bash
+python3 uxflow/scripts/uxflow.py ignore UXF-NOERR-0A7D --reason "3. çeyrekte ele alınacak"
+```
+
+It moves to an "accepted" section of the report and stops failing CI, but stays visible.
+This is what makes `--fail-on-high` adoptable on an existing codebase.
+
+Full guide: `references/findings-guide.md`.
 
 ---
 
 ## Before/after comparison
 
-This is the feature that makes the diagrams a design tool rather than documentation.
-
 ```bash
 cp docs/ux-flows/checkout.flow.json docs/ux-flows/checkout-proposed.flow.json
-# edit the proposed file: give it a new `id`, then
-# remove steps, add error branches, merge screens
-python3 scripts/uxflow.py diff docs/ux-flows/checkout.flow.json \
-                               docs/ux-flows/checkout-proposed.flow.json \
-                               -o docs/ux-flows
+# edit the proposed file: remove steps, add error branches, merge screens
+python3 uxflow/scripts/uxflow.py diff docs/ux-flows/checkout.flow.json \
+                                      docs/ux-flows/checkout-proposed.flow.json \
+                                      -o docs/ux-flows
 ```
 
-Output is named after the *second* file plus `-diff`, so this writes
-`checkout-proposed-diff.drawio/.mmd/.svg`, colour-coded added / removed / changed, plus
-`checkout-proposed-diff.md` with the metric delta (steps, screens, taps, required fields,
-error branches, findings per severity) and the list of findings the redesign resolves or
-introduces.
-
-**Keep node ids identical between the two files for anything that survives the redesign** —
-that is how the diff knows a screen was *changed* rather than *replaced*.
+Adds a **Değişim** page to the `.drawio` and a metric-delta table to the report.
+**Keep node ids identical for anything that survives the redesign** — that is how the
+diff knows a screen was *changed* rather than *replaced*.
 
 ---
 
 ## Keeping diagrams honest
 
-Add to CI:
-
 ```yaml
-- run: python3 scripts/uxflow.py check docs/ux-flows/*.flow.json -o docs/ux-flows
+- run: python3 uxflow/scripts/uxflow.py check docs/ux-flows/*.flow.json -o docs/ux-flows
+- run: python3 uxflow/scripts/uxflow.py audit docs/ux-flows/*.flow.json --fail-on-high
 ```
 
-`check` compares each IR's content hash against `.uxflow.lock.json` and fails when someone
-edited the IR without regenerating. Pair it with `render --fail-on-high` to block merges that
-introduce a dead end or an unhandled network failure.
-
----
-
-## What the audit detects
-
-Structural, from the graph alone: unreachable nodes, orphans, dead ends, screens whose only
-exit is backwards, API calls with no error branch, decisions with a single branch, and flows
-deeper than six steps. Plus every `friction` tag you recorded, severity-ranked.
-
-The audit never invents a problem. If it flags something, it is because the graph says so — and
-the node carries a `source` anchor so the user can go look.
+`check` compares each IR's content hash against `.uxflow.lock.json` and fails when
+someone edited the IR without regenerating. Copy-ready workflow: `examples/ci/uxflow.yml`.
 
 ---
 
@@ -237,9 +227,10 @@ Read on demand, not upfront:
 | File | Read it when |
 | --- | --- |
 | `references/ir-authoring.md` | writing or editing a `.flow.json` |
+| `references/findings-guide.md` | explaining the report to the user |
 | `references/discovery-web.md` | Next.js / React / React Router app |
 | `references/discovery-react-native.md` | React Native or Expo app |
 | `references/discovery-flutter.md` | Flutter app |
 | `references/discovery-native.md` | SwiftUI, UIKit or Jetpack Compose app |
 | `schema/flow.schema.json` | you need the exact field contract |
-| `examples/checkout.flow.json` | you want a complete, realistic worked example |
+| `examples/checkout.flow.json` | you want a complete worked example |

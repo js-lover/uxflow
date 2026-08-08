@@ -36,19 +36,22 @@ jobs:
         run: python3 uxflow/scripts/uxflow.py check docs/ux-flows/*.flow.json -o docs/ux-flows
 
       # 3. Block merges that introduce a dead end or an unhandled network failure.
-      #    Remove --fail-on-high while you are still adopting; the audit still runs.
+      #    Findings the team has accepted live in .uxflowignore and do not fail the build,
+      #    which is what makes this switch adoptable on an existing codebase.
       - name: UX audit
         run: python3 uxflow/scripts/uxflow.py audit docs/ux-flows/*.flow.json --fail-on-high
 
-      # 4. Surface the findings in the PR so reviewers see them without opening files.
+      # 4. Surface the headline and priority list in the PR, so reviewers see the
+      #    findings without opening a file.
       - name: Summarise
         if: always()
         run: |
           {
             echo "## UX flow audit"
-            for f in docs/ux-flows/*.findings.md; do
+            for f in docs/ux-flows/*.md; do
               [ -e "$f" ] || continue
               echo ""
-              sed -n '1,60p' "$f"
+              # everything up to the embedded diagram: summary + priority list
+              sed -n '1,/^## Akış$/p' "$f" | sed '$d'
             done
           } >> "$GITHUB_STEP_SUMMARY"

@@ -11,10 +11,17 @@ Pipeline: break cycles -> layer -> order (barycenter) -> assign coordinates.
 from . import ir
 
 H_GAP = 46          # horizontal gap between sibling nodes
-V_GAP = 62          # vertical gap between ranks
+V_GAP = 54          # vertical gap between ranks
 LANE_PAD = 28       # padding inside a lane
 LANE_HEADER = 34    # lane title bar height
 MARGIN = 40
+
+# Node types that conceptually belong to the user but should be drawn next to the
+# screen that triggers them. Putting a tap in the "user" lane while the screen it
+# happens on sits three columns away produces edges that cross the whole canvas
+# for no informational gain.
+LANE_INHERITING = {"action"}
+LANE_ANCHORS = {"screen", "modal", "state"}
 
 
 # ------------------------------------------------------------------ graph prep
@@ -99,6 +106,30 @@ def _order(doc, rank, out, inc):
 
 
 # ----------------------------------------------------------------- coordinates
+def effective_lanes(doc):
+    """Lane each node is *drawn* in, which is not always the lane it belongs to.
+
+    The IR keeps the semantically correct lane (a tap is something the user does).
+    Layout moves interaction nodes next to the screen they happen on, because that
+    is where a reader looks for them. The IR is never modified.
+    """
+    idx = ir.index(doc)
+    inc = {n["id"]: [] for n in doc["nodes"]}
+    for e in doc["edges"]:
+        if e.get("kind") != "back":
+            inc[e["to"]].append(e["from"])
+
+    lanes = {n["id"]: n.get("lane") for n in doc["nodes"]}
+    for n in doc["nodes"]:
+        if n["type"] not in LANE_INHERITING:
+            continue
+        anchors = [idx[src] for src in inc[n["id"]]
+                   if src in idx and idx[src]["type"] in LANE_ANCHORS]
+        if len(anchors) == 1 and anchors[0].get("lane"):
+            lanes[n["id"]] = anchors[0]["lane"]
+    return lanes
+
+
 def compute(doc, annotated=True):
     """Return {'nodes': {id: {x,y,w,h}}, 'lanes': [...], 'width':, 'height':,
     'rank': {...}, 'back_edges': set}."""
@@ -156,9 +187,10 @@ def _plain_layout(by_rank, size):
 
 def _lane_layout(doc, by_rank, rank, size, idx, lanes):
     lane_ids = [l["id"] for l in lanes]
+    drawn = effective_lanes(doc)
     lane_of = {}
     for n in doc["nodes"]:
-        lane_of[n["id"]] = n.get("lane") or lane_ids[0]
+        lane_of[n["id"]] = drawn.get(n["id"]) or n.get("lane") or lane_ids[0]
 
     # width each lane needs = widest (lane, rank) cell
     lane_w = {}

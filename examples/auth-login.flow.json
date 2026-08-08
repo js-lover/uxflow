@@ -1,0 +1,314 @@
+{
+  "version": "1.0",
+  "id": "auth-login",
+  "title": "Login (Supabase OAuth + magic link)",
+  "description": "Reaching a protected route, signing in with Google OAuth or an emailed magic link, and returning through the auth callback.",
+  "app": {
+    "name": "Example App",
+    "stack": "nextjs",
+    "commit": "a31a654"
+  },
+  "direction": "TD",
+  "lanes": [
+    {
+      "id": "user",
+      "label": "User"
+    },
+    {
+      "id": "ui",
+      "label": "App UI"
+    },
+    {
+      "id": "api",
+      "label": "Backend"
+    },
+    {
+      "id": "data",
+      "label": "External / data"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "auth-start",
+      "type": "start",
+      "label": "Opens a protected route",
+      "lane": "user",
+      "kind": "happy",
+      "source": "components/sidebar.tsx:26"
+    },
+    {
+      "id": "auth-guard",
+      "type": "decision",
+      "label": "Signed in?",
+      "lane": "api",
+      "kind": "happy",
+      "source": "app/(app)/layout.tsx:10",
+      "annotations": {
+        "note": "Every route in the (app) group redirects to /login when there is no Supabase user."
+      }
+    },
+    {
+      "id": "login-screen",
+      "type": "screen",
+      "label": "Login page",
+      "lane": "ui",
+      "kind": "happy",
+      "route": "/login",
+      "source": "app/login/page.tsx:44",
+      "annotations": {
+        "taps": 1,
+        "required_fields": 0,
+        "note": "Google sign-in and email magic link are offered on the same screen."
+      }
+    },
+    {
+      "id": "google-oauth-action",
+      "type": "action",
+      "label": "Tap: sign in with Google",
+      "lane": "user",
+      "kind": "happy",
+      "source": "app/login/page.tsx:53",
+      "annotations": {
+        "taps": 1
+      }
+    },
+    {
+      "id": "supabase-google-oauth",
+      "type": "external",
+      "label": "Supabase Google OAuth",
+      "lane": "data",
+      "kind": "happy",
+      "source": "app/login/page.tsx:20",
+      "annotations": {
+        "friction": [
+          "external_handoff"
+        ],
+        "wait": "user returns from the provider screen to /auth/callback"
+      }
+    },
+    {
+      "id": "magic-link-form",
+      "type": "action",
+      "label": "Tap: email me a sign-in link",
+      "lane": "user",
+      "kind": "edge",
+      "source": "app/login/page.tsx:82",
+      "annotations": {
+        "taps": 1,
+        "required_fields": 1
+      }
+    },
+    {
+      "id": "supabase-otp",
+      "type": "api",
+      "label": "Supabase signInWithOtp",
+      "lane": "api",
+      "kind": "edge",
+      "source": "app/login/page.tsx:35",
+      "annotations": {
+        "wait": "user returns from the provider screen to /auth/callback"
+      }
+    },
+    {
+      "id": "magic-link-sent",
+      "type": "state",
+      "label": "Sign-in link sent (waiting for email)",
+      "lane": "ui",
+      "kind": "edge",
+      "source": "app/login/page.tsx:68"
+    },
+    {
+      "id": "auth-callback",
+      "type": "api",
+      "label": "GET /auth/callback",
+      "lane": "api",
+      "kind": "happy",
+      "route": "/auth/callback",
+      "source": "app/auth/callback/route.ts:4"
+    },
+    {
+      "id": "exchange-session",
+      "type": "data",
+      "label": "Supabase session exchange",
+      "lane": "data",
+      "kind": "happy",
+      "source": "app/auth/callback/route.ts:10"
+    },
+    {
+      "id": "login-error",
+      "type": "state",
+      "label": "Sign-in error shown",
+      "lane": "ui",
+      "kind": "error",
+      "source": "app/login/page.tsx:104"
+    },
+    {
+      "id": "callback-error-redirect",
+      "type": "state",
+      "label": "/login?error=auth",
+      "lane": "ui",
+      "kind": "error",
+      "route": "/login?error=auth",
+      "source": "app/auth/callback/route.ts:17",
+      "annotations": {
+        "note": "The callback error query is never read by the login UI; the only visible error comes from client-side auth calls.",
+        "friction": [
+          "no_error_state"
+        ],
+        "evidence": [
+          "app/login/page.tsx:8",
+          "app/login/page.tsx:104"
+        ]
+      }
+    },
+    {
+      "id": "app-home",
+      "type": "screen",
+      "label": "Home",
+      "lane": "ui",
+      "kind": "happy",
+      "route": "/",
+      "source": "app/(app)/page.tsx:1"
+    },
+    {
+      "id": "auth-end",
+      "type": "end",
+      "label": "App is usable",
+      "lane": "user",
+      "kind": "happy",
+      "source": "app/(app)/layout.tsx:17"
+    }
+  ],
+  "edges": [
+    {
+      "from": "auth-start",
+      "to": "auth-guard",
+      "label": "route render",
+      "kind": "happy",
+      "source": "app/(app)/layout.tsx:5"
+    },
+    {
+      "from": "auth-guard",
+      "to": "login-screen",
+      "label": "redirect /login",
+      "kind": "edge",
+      "condition": "!user",
+      "source": "app/(app)/layout.tsx:15"
+    },
+    {
+      "from": "auth-guard",
+      "to": "app-home",
+      "label": "authenticated",
+      "kind": "happy",
+      "condition": "user",
+      "source": "app/(app)/layout.tsx:17"
+    },
+    {
+      "from": "login-screen",
+      "to": "google-oauth-action",
+      "label": "tap Google",
+      "kind": "happy",
+      "source": "app/login/page.tsx:53"
+    },
+    {
+      "from": "google-oauth-action",
+      "to": "supabase-google-oauth",
+      "label": "signInWithOAuth",
+      "kind": "happy",
+      "source": "app/login/page.tsx:20"
+    },
+    {
+      "from": "supabase-google-oauth",
+      "to": "auth-callback",
+      "label": "redirectTo",
+      "kind": "happy",
+      "source": "app/login/page.tsx:22"
+    },
+    {
+      "from": "login-screen",
+      "to": "magic-link-form",
+      "label": "or use email",
+      "kind": "edge",
+      "source": "app/login/page.tsx:82"
+    },
+    {
+      "from": "magic-link-form",
+      "to": "supabase-otp",
+      "label": "submit",
+      "kind": "edge",
+      "source": "app/login/page.tsx:30"
+    },
+    {
+      "from": "supabase-otp",
+      "to": "magic-link-sent",
+      "label": "ok",
+      "kind": "edge",
+      "source": "app/login/page.tsx:41"
+    },
+    {
+      "from": "supabase-otp",
+      "to": "login-error",
+      "label": "error.message",
+      "kind": "error",
+      "source": "app/login/page.tsx:40"
+    },
+    {
+      "from": "login-error",
+      "to": "login-screen",
+      "label": "try again",
+      "kind": "neutral",
+      "source": "app/login/page.tsx:104"
+    },
+    {
+      "from": "magic-link-sent",
+      "to": "auth-callback",
+      "label": "link in the email is opened",
+      "kind": "edge",
+      "source": "app/login/page.tsx:68"
+    },
+    {
+      "from": "auth-callback",
+      "to": "exchange-session",
+      "label": "code",
+      "kind": "happy",
+      "condition": "code",
+      "source": "app/auth/callback/route.ts:9"
+    },
+    {
+      "from": "exchange-session",
+      "to": "app-home",
+      "label": "no error",
+      "kind": "happy",
+      "condition": "!error",
+      "source": "app/auth/callback/route.ts:12"
+    },
+    {
+      "from": "auth-callback",
+      "to": "callback-error-redirect",
+      "label": "auth error",
+      "kind": "error",
+      "source": "app/auth/callback/route.ts:17"
+    },
+    {
+      "from": "exchange-session",
+      "to": "callback-error-redirect",
+      "label": "exchange error",
+      "kind": "error",
+      "source": "app/auth/callback/route.ts:17"
+    },
+    {
+      "from": "callback-error-redirect",
+      "to": "login-screen",
+      "label": "stays on /login",
+      "kind": "neutral",
+      "source": "app/auth/callback/route.ts:17"
+    },
+    {
+      "from": "app-home",
+      "to": "auth-end",
+      "label": "dashboard ready",
+      "kind": "happy",
+      "source": "app/(app)/layout.tsx:17"
+    }
+  ]
+}

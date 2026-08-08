@@ -13,7 +13,8 @@ import xml.etree.ElementTree as ET
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
-from uxflow_lib import analyze, diffing, drawio, ir, layout, mermaid, svg  # noqa: E402
+from uxflow_lib import (analyze, benchmarks, catalog, diffing, drawio, ir,  # noqa: E402
+                        layout, mermaid, report, svg)
 
 EXAMPLE = os.path.join(ROOT, "examples", "checkout.flow.json")
 PROPOSED = os.path.join(ROOT, "examples", "checkout-proposed.flow.json")
@@ -269,14 +270,53 @@ class TestAudit(unittest.TestCase):
         self.assertIn("unreachable", {f["code"] for f in report["findings"]})
 
     def test_markdown_report_renders(self):
-        md = analyze.to_markdown(self.doc, self.report)
-        self.assertIn("# UX audit", md)
-        self.assertIn("Primary path", md)
+        md = report.render(self.doc, self.report)
+        self.assertIn("UX raporu", md)
+        self.assertIn("## Ana yol", md)
+        self.assertIn("## Öncelik sırası", md)
         self.assertIn("src/app/checkout/declined/page.tsx:9", md)
 
+    def test_report_embeds_the_diagram(self):
+        md = report.render(self.doc, self.report, embed_diagram=True)
+        self.assertIn("```mermaid", md)
+        self.assertIn("flowchart TD", md)
+
     def test_findings_carry_source_anchors(self):
-        with_source = [f for f in self.report["findings"] if f["node"] and f["label"]]
-        self.assertTrue(any(f["source"] for f in with_source))
+        anchored = [f for f in self.report["findings"] if f["node"] and f["label"]]
+        self.assertTrue(any(f["evidence"] for f in anchored))
+
+    def test_findings_are_actionable(self):
+        """Every finding must say what to do; a finding without a fix is noise."""
+        for f in self.report["findings"]:
+            self.assertTrue(f["title"], f["code"])
+            self.assertTrue(f["what"], f["code"])
+            self.assertTrue(f["impact"], f["code"])
+            self.assertTrue(f["fix"], f["code"])
+            self.assertIn(f["severity"], ("high", "medium", "low"))
+            self.assertIn(f["effort"], ("S", "M", "L"))
+
+    def test_finding_ids_are_stable(self):
+        again = analyze.audit(ir.load(EXAMPLE))
+        self.assertEqual([f["id"] for f in self.report["findings"]],
+                         [f["id"] for f in again["findings"]])
+
+    def test_suppression_moves_findings_aside(self):
+        target = self.report["findings"][0]["id"]
+        muted = analyze.audit(ir.load(EXAMPLE), suppressed={target})
+        self.assertNotIn(target, [f["id"] for f in muted["findings"]])
+        self.assertIn(target, [f["id"] for f in muted["suppressed"]])
+
+    def test_informational_tags_are_not_findings(self):
+        codes = {f["code"] for f in self.report["findings"]}
+        self.assertNotIn("friction:external_handoff", codes)
+        self.assertTrue(any(i["tag"] == "external_handoff" for i in self.report["info"]))
+
+    def test_terminals_do_not_count_as_steps(self):
+        path = self.report["primary_path"]
+        idx = ir.index(self.doc)
+        terminals = sum(1 for n in path if idx[n]["type"] in ("start", "end"))
+        self.assertEqual(self.report["metrics"]["primary_path_steps"],
+                         len(path) - terminals)
 
     def test_primary_path_is_exact_on_a_branchy_graph(self):
         """A wide subgraph explored first must not hide a deeper branch.
@@ -369,8 +409,7 @@ class TestCLI(unittest.TestCase):
         try:
             self.assertEqual(cli.main(["validate", EXAMPLE]), 0)
             self.assertEqual(cli.main(["render", EXAMPLE, "-o", tmp]), 0)
-            for suffix in (".annotated.drawio", ".clean.drawio", ".annotated.mmd",
-                           ".annotated.svg", ".findings.md"):
+            for suffix in (".drawio", ".md"):
                 self.assertTrue(os.path.exists(os.path.join(tmp, "checkout" + suffix)), suffix)
             self.assertEqual(cli.main(["check", EXAMPLE, "-o", tmp]), 0)
             self.assertEqual(cli.main(["diff", EXAMPLE, PROPOSED, "-o", tmp]), 0)

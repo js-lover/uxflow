@@ -1,4 +1,8 @@
 {
+  "auth-login": {
+    "hash": "d8a63d4318a30f23",
+    "source": "examples/auth-login.flow.json"
+  },
   "checkout": {
     "hash": "ac3604074e5deec3",
     "source": "examples/checkout.flow.json"

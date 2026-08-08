@@ -35,8 +35,13 @@ def render(doc, lay, annotated=True, mode="normal"):
                  % (box["x"] + 12, box["y"] + off_y + 22, escape(box["label"])))
 
     idx = ir.index(doc)
+    # Occupied rectangles: node boxes first, then each label we place. Labels are
+    # nudged until they land somewhere free, so nothing overlaps by accident.
+    occupied = [(g["x"], g["y"] + off_y, g["x"] + g["w"], g["y"] + g["h"] + off_y)
+                for g in lay["nodes"].values()]
+    corridors = {}
     for i, e in enumerate(doc["edges"]):
-        o.append(_edge(e, lay, idx, off_y, annotated, mode, idx_hint=i))
+        o.append(_edge(e, lay, idx, off_y, annotated, mode, i, occupied, corridors))
     for n in doc["nodes"]:
         o.append(_node(n, lay["nodes"][n["id"]], off_y, annotated, mode))
 
@@ -92,7 +97,29 @@ def _node(node, g, off_y, annotated, mode):
     return "<g>" + title + shape + "".join(text) + "</g>"
 
 
-def _edge(e, lay, idx, off_y, annotated, mode, idx_hint=0):
+def _overlaps(rect, occupied):
+    x1, y1, x2, y2 = rect
+    for ox1, oy1, ox2, oy2 in occupied:
+        if x1 < ox2 and ox1 < x2 and y1 < oy2 and oy1 < y2:
+            return True
+    return False
+
+
+def _place_label(cx, cy, w, h, occupied):
+    """Find a free spot near (cx, cy) by stepping away vertically."""
+    for step in range(0, 9):
+        for direction in ((1, -1) if step else (1,)):
+            oy = cy + direction * step * (h + 3)
+            rect = (cx - w / 2, oy - h + 3, cx + w / 2, oy + 3)
+            if not _overlaps(rect, occupied):
+                occupied.append(rect)
+                return oy
+    return cy
+
+
+def _edge(e, lay, idx, off_y, annotated, mode, idx_hint=0, occupied=None, corridors=None):
+    occupied = occupied if occupied is not None else []
+    corridors = corridors if corridors is not None else {}
     a, b = lay["nodes"][e["from"]], lay["nodes"][e["to"]]
     kind = e.get("kind", "neutral")
     stroke = {"happy": "#2E7D32", "error": "#C62828", "edge": "#B8860B",
@@ -112,8 +139,15 @@ def _edge(e, lay, idx, off_y, annotated, mode, idx_hint=0):
     elif abs(x1 - x2) < 4:
         d = "M %g %g L %g %g" % (x1, y1, x2, y2)
     else:
-        my = (y1 + y2) / 2
+        # Horizontal runs between the same pair of ranks would sit on top of each
+        # other; give each one its own corridor a few pixels apart.
+        key = (round(y1), round(y2))
+        slot = corridors.setdefault(key, 0)
+        corridors[key] = slot + 1
+        my = (y1 + y2) / 2 + (slot - 1) * 11
+        my = min(max(my, y1 + 12), y2 - 12) if y2 - y1 > 26 else (y1 + y2) / 2
         d = "M %g %g V %g H %g V %g" % (x1, y1, my, x2, y2)
+        label_at = ((x1 + x2) / 2, my)
 
     marker = "arrow-back" if kind == "back" else "arrow-%s" % (
         kind if kind in theme.KIND_COLORS else "neutral")
@@ -125,9 +159,10 @@ def _edge(e, lay, idx, off_y, annotated, mode, idx_hint=0):
         label = (label + " [" + e["condition"] + "]").strip()
     if label:
         lx, ly = label_at or ((x1 + x2) / 2, (y1 + y2) / 2)
-        ly += (idx_hint % 3 - 1) * 13       # stagger to reduce label collisions
-        out.append('<rect x="%g" y="%g" width="%g" height="15" fill="#FFFFFF" opacity="0.9" rx="2"/>'
-                   % (lx - len(label) * 3.0, ly - 11, len(label) * 6.0))
+        lw, lh = len(label) * 6.0, 15
+        ly = _place_label(lx, ly, lw, lh, occupied)
+        out.append('<rect x="%g" y="%g" width="%g" height="%g" fill="#FFFFFF" opacity="0.92" rx="2"/>'
+                   % (lx - lw / 2, ly - 11, lw, lh))
         out.append('<text x="%g" y="%g" font-size="10.5" fill="#3F3F46" text-anchor="middle">%s</text>'
                    % (lx, ly, escape(label)))
     return "".join(out)

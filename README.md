@@ -18,15 +18,32 @@ Zero dependencies. Python 3.8+ standard library only. MIT.
 
 ## Why it exists
 
+Every application has two flows: the one the designer drew, and the one the code actually
+implements. The second one is written down nowhere. Error states, empty states, cancel
+paths, permission denials — these are rarely designed. They get improvised while coding,
+or left out entirely.
+
+uxflow extracts the second flow from the code itself. A real example from the login flow
+of a real app, found in the first run:
+
+> `/auth/callback` redirects to `/login?error=auth` when OAuth fails — but the login page
+> never reads that query parameter. A user whose sign-in fails lands on an empty login
+> screen with no message, taps the same button, and gets the same result.
+
+Nobody designed that. It is what the code does. The value here is not a pretty diagram;
+it is light on the branches nobody looked at.
+
+### And it stays true
+
 Flow diagrams rot. Someone draws the checkout flow in Figma, ships three changes, and the
 diagram is a lie by Friday. So nobody trusts it, so nobody updates it.
 
-uxflow fixes that by splitting the problem in two:
+uxflow avoids that by splitting the problem in two:
 
 ```
    you / your agent                    uxflow (deterministic)
    ────────────────                    ──────────────────────
-   read the code    ──►  flow.json  ──►  .drawio   .mmd   .svg   findings.md
+   read the code    ──►  flow.json  ──►  <id>.drawio      <id>.md
                          (in git)         (regenerated, never hand-edited)
 ```
 
@@ -37,20 +54,40 @@ code. The diagrams are build artefacts. A CI check fails the PR if they drift ap
 
 ## What you get
 
+Three files per flow. Not eight.
+
 | Output | For |
 | --- | --- |
-| `<flow>.annotated.drawio` | working sessions — friction, tap counts, required fields, error paths |
-| `<flow>.clean.drawio` | stakeholders — the same structure without the annotations |
-| `<flow>.mmd` | GitHub / GitLab Markdown, rendered inline |
-| `<flow>.svg` | README embeds, PR previews |
-| `<flow>.findings.md` | the audit: dead ends, unhandled errors, friction, funnel depth |
+| `<flow>.flow.json` | the IR — the only file you edit, reviewed like code |
+| `<flow>.drawio` | multi-page: **Akış** (clean) · **Akış + notlar** (annotated) · **Değişim** (after a diff) |
+| `<flow>.md` | the report: headline, priority list, diagram embedded as Mermaid, metrics, findings |
 
-Both `.drawio` variants are fully editable — real shapes on a real canvas, not an embedded
-image.
+The `.drawio` is fully editable — real shapes on a real canvas, not an embedded image — and
+draw.io shows each page as a tab, so the clean and annotated views live in one file instead
+of drifting apart in two.
 
-| annotated | clean | before/after diff |
+`--formats svg,mermaid` adds standalone files if you want them for README embeds.
+
+## When not to use it
+
+- **Not for greenfield design.** It reads existing code; it cannot draw a flow nobody wrote.
+- **Not a visual review.** It cares about structure, not about the colour of the button.
+- **It does not know what users actually do.** It extracts what the code *permits*, not what
+  people choose. It complements analytics; it does not replace them.
+- **Dynamic routing limits it.** If routes are assembled from strings at runtime, the map
+  will be incomplete — and the report says so rather than guessing.
+
+---
+
+## What it looks like
+
+| a real login flow | annotated view | before/after diff |
 | --- | --- | --- |
-| ![annotated](examples/preview/checkout-annotated.png) | ![clean](examples/preview/checkout-clean.png) | ![diff](examples/preview/checkout-diff.png) |
+| ![login](examples/preview/auth-login.png) | ![annotated](examples/preview/checkout-annotated.png) | ![diff](examples/preview/checkout-diff.png) |
+
+The first is `examples/auth-login.flow.json` — a Supabase OAuth + magic-link sign-in, mapped
+from a real Next.js app. Its report is `examples/output/auth-login.md`, and it is a good place
+to see what the findings actually read like.
 
 ---
 
@@ -132,16 +169,46 @@ or a network call with no error branch.
 
 Purely from the graph, no heuristics, no guessing:
 
-- **unreachable** nodes — no path from any entry point
-- **orphans** — nothing links here; reachable only by deep link or accident
-- **dead ends** — the user arrives and the flow offers no way out
-- **back-only screens** — the only exit is backwards
-- **API calls with no error branch** — usually a real swallowed exception
-- **single-branch decisions** — the alternative path is missing from the code or the model
-- **funnel depth** over six steps
-- every **friction tag** you recorded, severity-ranked, each with its `file:line`
+**Can the user get stuck?** — dead ends · back-only screens · unreachable nodes · orphans ·
+redirect loops that contain no way to change the outcome
 
-Every finding points at a line of code. If it cannot, it is not reported.
+**What happens when it fails?** — API calls with no error branch · external hand-offs
+(OAuth, 3-D Secure, payment) with no cancel path · error states with no recovery ·
+out-of-band waits (magic link, OTP) with no resend · single-branch decisions
+
+**Is it longer than it needs to be?** — funnel depth · taps · required fields · every
+friction tag you recorded, severity-ranked
+
+Plus model-quality checks: nodes with no `source` anchor are flagged, because a claim you
+cannot verify weakens the whole map.
+
+### Findings are written to be acted on
+
+Not `no_error_state · "No error state."` A finding says what the code does, what the user
+experiences, what to change, and where:
+
+```markdown
+### UXF-NOERR-0A7D · Hata kullanıcıya gösterilmiyor
+**Önem:** yüksek · **Güven:** kesin · **Efor:** S (~1 saat)
+
+**Ne oluyor** — /auth/callback hata durumunda /login?error=auth'a yönlendiriyor, ancak
+login sayfası bu query parametresini hiç okumuyor.
+
+**Kullanıcı ne yaşıyor** — Giriş dener, bir şey ters gider, kendini boş login ekranında
+bulur. Hiçbir hata mesajı yok, aynı butona tekrar basar, aynı sonucu alır.
+
+**Ne yapmalı** — useSearchParams() ile error parametresini oku ve mevcut hata bileşenine bas.
+
+**Kanıt** — app/auth/callback/route.ts:17 · app/login/page.tsx:8 · app/login/page.tsx:104
+```
+
+Every finding has a stable id. Accept one and it stops failing CI without disappearing:
+
+```bash
+python3 scripts/uxflow.py ignore UXF-NOERR-0A7D --reason "Q3'te ele alınacak"
+```
+
+That is what makes `--fail-on-high` adoptable on a codebase that already exists.
 
 ---
 
@@ -164,13 +231,13 @@ The IR itself is stack-agnostic — anything you can read, you can model.
 
 ```
 uxflow.py validate <flow.json>...                       schema + integrity check
-uxflow.py render   <flow.json>... [-o DIR]              .drawio / .mmd / .svg / .md
-                   [--variant both|annotated|clean]
-                   [--formats drawio,mermaid,svg,md]
-                   [--fail-on-high] [--no-audit]
-uxflow.py audit    <flow.json>... [-o DIR]              findings only
+uxflow.py render   <flow.json>... [-o DIR]              .drawio + report
+                   [--formats drawio,md,svg,mermaid]    default: drawio,md
+                   [--fail-on-high]
+uxflow.py audit    <flow.json>... [-o DIR]              report only
 uxflow.py diff     <before.json> <after.json> [-o DIR]  before/after + metric delta
 uxflow.py check    <flow.json>... [-o DIR]              CI guard against stale diagrams
+uxflow.py ignore   <FINDING-ID>... [--reason TEXT]      accept a finding
 uxflow.py init     <flow-id> [-o DIR]                   scaffold an IR file
 uxflow.py id       <route> [component]                  mint a stable node id
 ```
@@ -208,6 +275,14 @@ nobody trusts. Hover a box in draw.io and you get `src/app/checkout/payment/page
 **Why an intermediate JSON at all?** It decouples the part that needs judgement (reading code)
 from the part that must be deterministic (drawing). It also means any agent — or a human, or a
 script — can produce input, and the output is always the same.
+
+**Why is the primary path computed with a DAG dynamic program?** Two earlier versions were
+wrong in instructive ways. Following `happy` edges greedily meant a guard like *"already
+signed in? → home"* ended the search after two hops, and every metric described a path no
+real user walks. Enumerating simple paths under a visit budget was worse: a wide fan-out
+exhausts the budget and returns a truncated answer *without saying so*. Removing
+cycle-closing edges gives a DAG, where longest path is linear and exact. Silently wrong
+metrics are the worst kind of bug in a tool people are supposed to trust.
 
 ---
 

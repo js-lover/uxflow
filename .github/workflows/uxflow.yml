@@ -40,7 +40,8 @@ jobs:
         run: |
           python3 scripts/uxflow.py render examples/checkout.flow.json \
                                            examples/checkout-proposed.flow.json \
-                                           -o examples/output
+                                           examples/auth-login.flow.json \
+                                           -o examples/output --formats drawio,md,svg
           python3 scripts/uxflow.py diff   examples/checkout.flow.json \
                                            examples/checkout-proposed.flow.json \
                                            -o examples/output

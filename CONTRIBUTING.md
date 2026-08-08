@@ -51,12 +51,34 @@ guess is worse than no playbook.
 
 ## Adding a friction tag
 
-1. `theme.FRICTION_LABELS` — the human-readable label.
-2. `theme.SEVERE_FRICTION` — only if the tag reliably indicates a real defect.
+1. `theme.FRICTION_LABELS` — the short label shown inside a diagram node.
+2. `catalog.CATALOG["friction:<tag>"]` — **required**: title, severity, confidence, effort,
+   and the three texts (`what` / `impact` / `fix`). A finding without a `fix` is noise; the
+   test suite enforces this.
 3. `schema/flow.schema.json` — the enum.
-4. `references/ir-authoring.md` — the "evidence you must have found" table. **Required.** A tag
+4. `references/ir-authoring.md` — the "evidence you must have found" row. **Required.** A tag
    with no stated evidence rule will get applied loosely and devalue the whole audit.
-5. A test in `tests/test_uxflow.py`.
+5. `references/findings-guide.md` — a row in the rules table.
+6. A test in `tests/test_uxflow.py`.
+
+If the tag describes normal behaviour rather than a defect (like `external_handoff`), add it
+to `catalog.INFORMATIONAL` instead. Listing non-problems as findings buries the real ones.
+
+## Adding an audit rule
+
+Rules live in `analyze.py` and their prose lives in `catalog.py`. Two things to get right:
+
+- **No false positives.** A rule that cries wolf costs more trust than it earns. Prefer a
+  narrow rule that misses cases over a broad one that misfires. `_loop_is_risky` is the model
+  here: it ignores cycles containing an action or a form, because those are legitimate retries.
+- **Say what to do.** If you cannot write a useful `fix`, the rule is not ready.
+
+## Writing findings text
+
+Write for someone who has not opened the code. `what` is mechanical and verifiable. `impact`
+describes a person's experience, concretely — "kullanıcı boş bir ekranda kalır ve aynı butona
+tekrar basar", not "kötü kullanıcı deneyimi". `fix` names the change, and mentions the
+framework idiom when there is an obvious one.
 
 ## Changing the layout
 

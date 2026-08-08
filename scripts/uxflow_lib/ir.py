@@ -241,6 +241,8 @@ def wrap(text, width):
 
 def node_lines(node, annotated=True, width=26):
     """Return the list of display lines for a node. Renderer-agnostic."""
+    if node["type"] == "decision":
+        width = 20            # a diamond's usable width is far narrower than its box
     lines = list(wrap(node["label"], width))
     if not annotated:
         return lines
@@ -276,9 +278,17 @@ def node_size(node, annotated=True):
     shape = theme.SHAPES.get(node["type"], theme.SHAPES["screen"])
     lines = node_lines(node, annotated=annotated)
     longest = max((len(l) for l in lines), default=0)
-    w = max(shape["min_w"], min(300, 22 + longest * 7))
-    h = max(shape["min_h"], 24 + len(lines) * 16)
+    text_w = 22 + longest * 7
+    text_h = 24 + len(lines) * 16
+
     if node["type"] == "decision":
-        w = max(w, 200)
-        h = max(h, 90)
+        # Text sits in the rectangle inscribed in the diamond, which is half the
+        # width and half the height of the bounding box. Size for that, or the
+        # label spills outside the shape -- the most common cosmetic complaint.
+        w = max(shape["min_w"], min(420, int(text_w * 1.9)))
+        h = max(shape["min_h"], int(text_h * 1.9))
+        return int(w), int(h)
+
+    w = max(shape["min_w"], min(300, text_w))
+    h = max(shape["min_h"], text_h)
     return int(w), int(h)
