@@ -363,6 +363,123 @@ class TestAudit(unittest.TestCase):
         self.assertNotIn("back", walked)
 
 
+class TestNoFalsePositives(unittest.TestCase):
+    """Adversarial graphs, every one of which made a rule misfire at least once.
+
+    A rule that cries wolf costs more trust than it earns, so each of these is a
+    healthy flow that must come back clean -- paired with the minimal broken
+    variant that must still be caught.
+    """
+
+    @staticmethod
+    def _n(nid, typ, label, **kw):
+        node = {"id": nid, "type": typ, "label": label, "source": "src/x.tsx:1"}
+        node.update(kw)
+        return node
+
+    def _codes(self, nodes, edges):
+        doc = ir.normalize({"version": "1.0", "id": "t", "title": "T",
+                            "nodes": nodes, "edges": edges})
+        return {f["code"] for f in analyze.audit(doc)["findings"]}
+
+    def test_clipboard_state_is_not_an_unanswered_wait(self):
+        """'Bağlantı kopyalandı' mentions a link, but nothing was sent."""
+        codes = self._codes(
+            [self._n("s", "start", "B"), self._n("btn", "action", "Kopyala"),
+             self._n("copied", "state", "Baglanti kopyalandi"), self._n("e", "end", "Bitti")],
+            [{"from": "s", "to": "btn", "kind": "happy"},
+             {"from": "btn", "to": "copied", "kind": "happy"},
+             {"from": "copied", "to": "e", "kind": "happy"}])
+        self.assertNotIn("waiting_no_resend", codes)
+
+    def test_magic_link_without_resend_is_caught(self):
+        codes = self._codes(
+            [self._n("s", "start", "B"), self._n("send", "api", "POST /otp"),
+             self._n("sent", "state", "Giris baglantisi gonderildi"),
+             self._n("cb", "api", "GET /cb"), self._n("e", "end", "Bitti")],
+            [{"from": "s", "to": "send", "kind": "happy"},
+             {"from": "send", "to": "sent", "kind": "happy"},
+             {"from": "send", "to": "sent", "kind": "error"},
+             {"from": "sent", "to": "cb", "kind": "happy"},
+             {"from": "cb", "to": "e", "kind": "happy"},
+             {"from": "cb", "to": "e", "kind": "error"}])
+        self.assertIn("waiting_no_resend", codes)
+
+    def test_magic_link_with_resend_is_clean(self):
+        codes = self._codes(
+            [self._n("s", "start", "B"), self._n("send", "api", "POST /otp"),
+             self._n("sent", "state", "Giris baglantisi gonderildi"),
+             self._n("cb", "api", "GET /cb"), self._n("e", "end", "Bitti")],
+            [{"from": "s", "to": "send", "kind": "happy"},
+             {"from": "send", "to": "sent", "kind": "happy"},
+             {"from": "send", "to": "sent", "kind": "error"},
+             {"from": "sent", "to": "send", "label": "tekrar gonder", "kind": "edge"},
+             {"from": "sent", "to": "cb", "kind": "happy"},
+             {"from": "cb", "to": "e", "kind": "happy"},
+             {"from": "cb", "to": "e", "kind": "error"}])
+        self.assertEqual(codes, set())
+
+    def test_cycle_with_an_exit_is_not_a_trap(self):
+        codes = self._codes(
+            [self._n("s", "start", "B"), self._n("a", "screen", "A"),
+             self._n("b", "screen", "B2"), self._n("e", "end", "Bitti")],
+            [{"from": "s", "to": "a", "kind": "happy"},
+             {"from": "a", "to": "b", "kind": "happy"},
+             {"from": "b", "to": "a", "kind": "neutral"},
+             {"from": "b", "to": "e", "kind": "happy"}])
+        self.assertNotIn("redirect_loop", codes)
+
+    def test_cycle_without_an_exit_is_caught(self):
+        codes = self._codes(
+            [self._n("s", "start", "B"), self._n("a", "screen", "A"),
+             self._n("b", "screen", "B2"), self._n("e", "end", "Bitti")],
+            [{"from": "s", "to": "a", "kind": "happy"},
+             {"from": "a", "to": "b", "kind": "happy"},
+             {"from": "b", "to": "a", "kind": "neutral"},
+             {"from": "s", "to": "e", "kind": "happy"}])
+        self.assertIn("redirect_loop", codes)
+
+    def test_external_with_cancel_branch_is_clean(self):
+        codes = self._codes(
+            [self._n("s", "start", "B"), self._n("x", "external", "3DS"),
+             self._n("ok", "screen", "Onay"), self._n("no", "state", "Iptal edildi"),
+             self._n("e", "end", "Bitti")],
+            [{"from": "s", "to": "x", "kind": "happy"},
+             {"from": "x", "to": "ok", "kind": "happy"},
+             {"from": "x", "to": "no", "kind": "error"},
+             {"from": "ok", "to": "e", "kind": "happy"},
+             {"from": "no", "to": "s", "kind": "back"}])
+        self.assertEqual(codes, set())
+
+    def test_external_without_cancel_branch_is_caught(self):
+        codes = self._codes(
+            [self._n("s", "start", "B"), self._n("x", "external", "3DS"),
+             self._n("ok", "screen", "Onay"), self._n("e", "end", "Bitti")],
+            [{"from": "s", "to": "x", "kind": "happy"},
+             {"from": "x", "to": "ok", "kind": "happy"},
+             {"from": "ok", "to": "e", "kind": "happy"}])
+        self.assertIn("external_no_return", codes)
+
+    def test_terminal_external_is_not_flagged(self):
+        """Leaving for the app store and never coming back is not a missing branch."""
+        codes = self._codes(
+            [self._n("s", "start", "B"), self._n("x", "external", "App Store"),
+             self._n("e", "end", "Bitti")],
+            [{"from": "s", "to": "x", "kind": "happy"},
+             {"from": "s", "to": "e", "kind": "happy"}])
+        self.assertNotIn("external_no_return", codes)
+
+    def test_dismissable_modal_is_not_a_dead_end(self):
+        codes = self._codes(
+            [self._n("s", "start", "B"), self._n("scr", "screen", "Ekran"),
+             self._n("m", "modal", "Bilgi"), self._n("e", "end", "Bitti")],
+            [{"from": "s", "to": "scr", "kind": "happy"},
+             {"from": "scr", "to": "m", "kind": "edge"},
+             {"from": "m", "to": "scr", "kind": "back"},
+             {"from": "scr", "to": "e", "kind": "happy"}])
+        self.assertEqual(codes, set())
+
+
 class TestDiff(unittest.TestCase):
     def setUp(self):
         self.before = ir.load(EXAMPLE)

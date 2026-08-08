@@ -84,16 +84,10 @@ CATALOG = {
                "`denied`) ve kullanıcıya ne olduğunu söyleyen bir duruma yönlendir. "
                "Dönüş adresini bu durumları taşıyacak şekilde tasarla.",
     },
-    "error_state_no_recovery": {
-        "title": "Hata durumundan kurtulma yolu yok",
-        "severity": "medium", "confidence": "certain", "effort": "S",
-        "what": "«{label}» bir hata durumu ve buradan çıkan hiçbir yeniden deneme ya da "
-                "alternatif yol yok.",
-        "impact": "Kullanıcı hatayı görüyor ama düzeltmek için yapabileceği bir şey yok. "
-                  "Hata mesajı, çözümü olmayan bir duvar haline geliyor.",
-        "fix": "En az bir kurtulma yolu ekle: yeniden dene, farklı yöntem dene, "
-               "ya da destek/geri dön.",
-    },
+    # `error_state_no_recovery` was removed in v1.1. Its only reachable condition was
+    # a self-loop, which `deadend` and `redirect_loop` already cover -- so it either
+    # never fired or fired on legitimate retry paths. A rule that cannot be trusted
+    # costs more than it earns.
     "redirect_loop": {
         "title": "Yönlendirme döngüsü riski",
         "severity": "high", "confidence": "likely", "effort": "M",

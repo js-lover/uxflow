@@ -6,7 +6,7 @@
 
 ## Özet
 
-Bu akışta 14 bulgu var; 2 tanesi kullanıcıyı doğrudan etkileyen, 1 tanesi orta öncelikli. Ana yol 7 adım.
+Bu akışta 12 bulgu var; 1 tanesi orta öncelikli. Ana yol 7 adım.
 
 Dikkat çeken ölçümler: kaynak çapası kapsamı (0%).
 
@@ -14,33 +14,29 @@ Dikkat çeken ölçümler: kaynak çapası kapsamı (0%).
 
 Bulguların önem, güven ve efor sırasına göre dizilmiş hâli. Yukarıdan aşağı çalışmak en hızlı iyileşmeyi verir.
 
-1. **Yönlendirme döngüsü riski** — POST /api/orders  
-   `UXF-LOOP-D47A` · yüksek öncelik · M (~yarım gün)
-2. **Yönlendirme döngüsü riski** — POST /api/shipping/quote  
-   `UXF-LOOP-DCDA` · yüksek öncelik · M (~yarım gün)
-3. **Ana yol gereğinden uzun** — Guest checkout (proposed)  
+1. **Ana yol gereğinden uzun** — Guest checkout (proposed)  
    `UXF-DEEP-2678` · orta öncelik · L (tasarım kararı gerekir)
-4. **Kaynak çapası olmayan düğüm** — Contact + shipping  
+2. **Kaynak çapası olmayan düğüm** — Contact + shipping  
    `UXF-SRC-87CF` · düşük öncelik · S (~1 saat)
-5. **Kaynak çapası olmayan düğüm** — Cart  
+3. **Kaynak çapası olmayan düğüm** — Cart  
    `UXF-SRC-397E` · düşük öncelik · S (~1 saat)
-6. **Kaynak çapası olmayan düğüm** — POST /api/orders  
+4. **Kaynak çapası olmayan düğüm** — POST /api/orders  
    `UXF-SRC-D2BF` · düşük öncelik · S (~1 saat)
-7. **Kaynak çapası olmayan düğüm** — Order could not be created  
+5. **Kaynak çapası olmayan düğüm** — Order could not be created  
    `UXF-SRC-DE37` · düşük öncelik · S (~1 saat)
-8. **Kaynak çapası olmayan düğüm** — Order confirmed  
+6. **Kaynak çapası olmayan düğüm** — Order confirmed  
    `UXF-SRC-D3E9` · düşük öncelik · S (~1 saat)
-9. **Kaynak çapası olmayan düğüm** — Payment declined  
+7. **Kaynak çapası olmayan düğüm** — Payment declined  
    `UXF-SRC-0623` · düşük öncelik · S (~1 saat)
-10. **Kaynak çapası olmayan düğüm** — orders table  
+8. **Kaynak çapası olmayan düğüm** — orders table  
    `UXF-SRC-4989` · düşük öncelik · S (~1 saat)
-11. **Kaynak çapası olmayan düğüm** — Payment  
+9. **Kaynak çapası olmayan düğüm** — Payment  
    `UXF-SRC-110F` · düşük öncelik · S (~1 saat)
-12. **Kaynak çapası olmayan düğüm** — 3-D Secure (bank page)  
+10. **Kaynak çapası olmayan düğüm** — 3-D Secure (bank page)  
    `UXF-SRC-ABCA` · düşük öncelik · S (~1 saat)
-13. **Kaynak çapası olmayan düğüm** — POST /api/shipping/quote  
+11. **Kaynak çapası olmayan düğüm** — POST /api/shipping/quote  
    `UXF-SRC-A57E` · düşük öncelik · S (~1 saat)
-14. **Kaynak çapası olmayan düğüm** — Quote unavailable  
+12. **Kaynak çapası olmayan düğüm** — Quote unavailable  
    `UXF-SRC-CEB0` · düşük öncelik · S (~1 saat)
 
 ## Akış
@@ -138,37 +134,7 @@ Kullanıcının hedefe ulaşmak için izlediği en uzun tam yolculuk — 7 adım
 | · | Düğüm | 13 |  |
 | · | Geçiş | 17 |  |
 
-## Bulgular (14)
-
-### UXF-LOOP-D47A · Yönlendirme döngüsü riski
-
-**Önem:** yüksek · **Güven:** güçlü ihtimal · **Efor:** M (~yarım gün)
-
-**Ne oluyor**  
-Şu düğümler bir döngü oluşturuyor ve döngüde kullanıcının durumunu değiştiren bir adım yok: POST /api/orders → Order could not be created.
-
-**Kullanıcı ne yaşıyor**  
-Hata kalıcıysa (örneğin oturum sürekli reddediliyorsa) kullanıcı bu döngüde sıkışır: ekranlar arasında gidip gelir, hiçbir zaman ilerleyemez. Kullanıcı için uygulamanın «donmuş» görünmesinin en yaygın sebebi budur.
-
-**Ne yapmalı**  
-Döngüye bir sayaç ya da kesme koşulu ekle: N denemeden sonra kullanıcıya ne olduğunu açıklayan bir ekran göster ve alternatif sun.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-LOOP-D47A`</sub>
-
-### UXF-LOOP-DCDA · Yönlendirme döngüsü riski
-
-**Önem:** yüksek · **Güven:** güçlü ihtimal · **Efor:** M (~yarım gün)
-
-**Ne oluyor**  
-Şu düğümler bir döngü oluşturuyor ve döngüde kullanıcının durumunu değiştiren bir adım yok: POST /api/shipping/quote → Quote unavailable.
-
-**Kullanıcı ne yaşıyor**  
-Hata kalıcıysa (örneğin oturum sürekli reddediliyorsa) kullanıcı bu döngüde sıkışır: ekranlar arasında gidip gelir, hiçbir zaman ilerleyemez. Kullanıcı için uygulamanın «donmuş» görünmesinin en yaygın sebebi budur.
-
-**Ne yapmalı**  
-Döngüye bir sayaç ya da kesme koşulu ekle: N denemeden sonra kullanıcıya ne olduğunu açıklayan bir ekran göster ve alternatif sun.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-LOOP-DCDA`</sub>
+## Bulgular (12)
 
 ### UXF-DEEP-2678 · Ana yol gereğinden uzun
 
@@ -391,7 +357,7 @@ Bu rapor `checkout-proposed.flow.json` dosyasından üretildi; o dosya da kod ta
 | api calls | 2 | 2 | ±0 |
 | error branches | 2 | 6 | +4 |
 | friction tags | 8 | 0 | -8 |
-| high-severity findings | 7 | 2 | -5 |
+| high-severity findings | 7 | 0 | -7 |
 | medium-severity findings | 5 | 1 | -4 |
 | low-severity findings | 0 | 11 | +11 |
 
@@ -422,8 +388,6 @@ Bu rapor `checkout-proposed.flow.json` dosyasından üretildi; o dosya da kod ta
 - `missing_source` on `psp`
 - `missing_source` on `shipping-api`
 - `missing_source` on `shipping-error`
-- `redirect_loop` on `charge`
-- `redirect_loop` on `shipping-api`
 
 ## Added
 

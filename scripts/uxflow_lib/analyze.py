@@ -26,7 +26,7 @@ PROBLEM_FOR = {
 _CODE_ABBR = {
     "deadend": "DEAD", "only_exit_is_back": "BACK", "unreachable": "UNRE",
     "orphan": "ORPH", "no_error_branch": "NOERR", "external_no_return": "EXT",
-    "error_state_no_recovery": "RECOV", "redirect_loop": "LOOP",
+    "redirect_loop": "LOOP",
     "waiting_no_resend": "RESEND", "decision_single_branch": "BRANCH",
     "flow_too_deep": "DEEP", "missing_source": "SRC",
 }
@@ -168,7 +168,10 @@ def _structural(doc, out, inc, ends, reachable, raw):
 
         if not forward and not back and nid not in ends and not terminal_ok:
             raw.append(_mk("deadend", nid, n))
-        elif not forward and back and not terminal_ok and t != "modal":
+        elif not forward and back and t == "screen":
+            # Only a full screen is a problem here. A modal you can only dismiss is
+            # normal, and so is a transient state ("cancelled", "error banner") whose
+            # only exit is back to where the user came from.
             raw.append(_mk("only_exit_is_back", nid, n))
 
         if t == "decision" and len(forward) < 2:
@@ -195,25 +198,22 @@ def _error_paths(doc, out, inc, raw):
         if t == "external" and forward and "error" not in kinds:
             raw.append(_mk("external_no_return", nid, n))
 
-        # 3. error state the user cannot recover from
-        if n.get("kind") == "error" and t in ("state", "screen", "modal"):
-            if not forward:
-                pass                       # already reported as a dead end
-            elif all(e["to"] == nid for e in forward):
-                raw.append(_mk("error_state_no_recovery", nid, n))
-
-        # 4. waiting on something out of band with no resend
+        # 3. waiting on something out of band with no resend
         #
-        # A resend means going *back* to whatever produced this state -- re-triggering
-        # the send. An edge that merely continues the journey (the emailed link finally
-        # being opened) is not a resend: it depends on the thing that never arrived.
+        # Two guards against false positives, both learned the hard way:
+        #   * the state must follow a network call. "Bağlantı kopyalandı" mentions a
+        #     link but nothing was sent, so there is nothing to resend.
+        #   * a resend means going *back* to whatever produced this state. An edge
+        #     that merely continues the journey (the emailed link finally being
+        #     opened) is not a resend -- it depends on the thing that never arrived.
         if t == "state" and _WAIT_HINT.search(n.get("label", "") + " " +
                                               ((n.get("annotations") or {}).get("note") or "")):
-            targets = {e["to"] for e in forward}
             producers = {e["from"] for e in inc[nid]}
+            sent_by_network = any(idx.get(p, {}).get("type") == "api" for p in producers)
+            targets = {e["to"] for e in forward}
             has_resend = bool(targets & producers) or any(
                 e.get("kind") == "back" for e in out[nid])
-            if not has_resend:
+            if sent_by_network and not has_resend:
                 raw.append(_mk("waiting_no_resend", nid, n))
 
 
@@ -234,7 +234,7 @@ def _loops(doc, out, idx, raw):
             if c == 1:
                 cycle = stack[stack.index(nxt):]
                 key = tuple(sorted(cycle))
-                if key not in seen_cycles and _loop_is_risky(cycle, idx):
+                if key not in seen_cycles and _loop_is_risky(cycle, idx, adj):
                     seen_cycles.add(key)
                     labels = " → ".join(idx[c]["label"] for c in cycle if c in idx)
                     raw.append(_mk("redirect_loop", cycle[0], idx.get(cycle[0]),
@@ -249,20 +249,28 @@ def _loops(doc, out, idx, raw):
             dfs(n["id"])
 
 
-def _loop_is_risky(cycle, idx):
-    """A loop is risky when nothing in it can change the user's situation.
+def _loop_is_risky(cycle, idx, adj):
+    """A loop is a trap only if the user cannot get out of it.
 
-    A cycle that passes through a form, an action or a decision is a legitimate
-    retry loop. One made only of screens, states and redirects is a trap.
+    Two escape hatches disqualify a cycle, and both had to be added after the
+    rule fired on perfectly healthy graphs:
+
+      * something in the cycle can change the outcome -- an action, a decision,
+        a form. That is a retry loop, which is the correct design.
+      * some node in the cycle leads somewhere outside it. If there is a door,
+        the user is not trapped, no matter how the cycle looks.
     """
     if len(cycle) < 2:
         return False
+    members = set(cycle)
     for nid in cycle:
         node = idx.get(nid) or {}
         if node.get("type") in ("action", "decision"):
             return False
         ann = node.get("annotations") or {}
         if ann.get("required_fields") or ann.get("taps"):
+            return False
+        if any(t not in members for t in adj.get(nid, [])):
             return False
     return True
 
