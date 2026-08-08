@@ -20,6 +20,28 @@ cd uxflow
 python3 -m unittest discover -s tests -v
 ```
 
+### Two entry points, one codebase
+
+`scripts/uxflow_lib/` is the package. It ships to PyPI under the import name `uxflow`,
+and it is also runnable straight from a checkout:
+
+```bash
+uxflow render ...                          # installed console script -> uxflow.cli:main
+python3 scripts/uxflow.py render ...       # vendored, nothing installed
+```
+
+Both must keep working, which imposes two rules:
+
+- **modules inside the package use relative imports** (`from . import ir`). An absolute
+  `import uxflow_lib` breaks the moment the package is installed under another name.
+- **`scripts/uxflow.py` stays a shim.** Logic there would only run for vendored users.
+
+There is a test for each of these.
+
+When you bump the version, change it in `pyproject.toml` *and*
+`scripts/uxflow_lib/__init__.py` — a test compares them, and the release workflow
+refuses to publish when the tag disagrees.
+
 ## Before you open a PR
 
 ```bash

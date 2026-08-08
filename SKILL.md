@@ -88,8 +88,12 @@ auth-login.md          the report, with the diagram embedded as Mermaid
 
 ```bash
 python3 --version                    # 3.8+ required; no other dependency
-python3 uxflow/scripts/uxflow.py --help
+uxflow --help || python3 uxflow/scripts/uxflow.py --help
 ```
+
+If `uxflow` is on PATH (installed with `pip install uxflow`), use that; otherwise call
+the vendored `python3 uxflow/scripts/uxflow.py`. The examples below use the vendored
+form because it always works.
 
 If `docs/ux-flows/*.flow.json` already exists, this is a **re-run**: read the existing
 IR, update it in place, preserve node ids.

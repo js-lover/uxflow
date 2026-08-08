@@ -106,11 +106,15 @@ IR, and runs the renderer.
 ### By hand
 
 ```bash
-python3 scripts/uxflow.py init checkout -o docs/ux-flows
+pip install uxflow
+
+uxflow init checkout -o docs/ux-flows
 # edit docs/ux-flows/checkout.flow.json
-python3 scripts/uxflow.py validate docs/ux-flows/checkout.flow.json
-python3 scripts/uxflow.py render   docs/ux-flows/checkout.flow.json -o docs/ux-flows
+uxflow validate docs/ux-flows/checkout.flow.json
+uxflow render   docs/ux-flows/checkout.flow.json -o docs/ux-flows
 ```
+
+Without installing anything, substitute `python3 uxflow/scripts/uxflow.py` for `uxflow`.
 
 ### See it work right now
 
@@ -249,12 +253,19 @@ uxflow.py id       <route> [component]                  mint a stable node id
 ```
 SKILL.md                      Claude Code / Cowork entry point
 AGENTS.md                     entry point for every other agent
+pyproject.toml                PyPI packaging (no dependencies)
 schema/flow.schema.json       the IR contract
-scripts/uxflow.py             CLI
-scripts/uxflow_lib/           layout, renderers, audit, diff (stdlib only)
-references/                   discovery playbooks + IR authoring guide
-examples/                     a complete worked flow, its proposed redesign, and outputs
-tests/test_uxflow.py          unittest suite, no dependencies
+scripts/uxflow.py             thin shim for vendored use
+scripts/uxflow_lib/           the package — ships to PyPI as `uxflow`
+  cli.py                        argument parsing and commands
+  analyze.py  catalog.py        audit rules and their prose
+  benchmarks.py  report.py      metric verdicts and the Markdown report
+  layout.py  drawio.py          geometry and renderers
+  mermaid.py  svg.py  theme.py
+  ir.py  diffing.py             the IR and before/after comparison
+references/                   discovery playbooks, IR authoring, findings guide
+examples/                     two worked flows, a proposed redesign, and outputs
+tests/test_uxflow.py          64 tests, no dependencies
 ```
 
 ---
@@ -288,6 +299,13 @@ metrics are the worst kind of bug in a tool people are supposed to trust.
 
 ## Installing
 
+**As a CLI:**
+
+```bash
+pip install uxflow
+uxflow init checkout -o docs/ux-flows
+```
+
 **As a Claude skill** — download `uxflow.skill` from
 [Releases](https://github.com/js-lover/uxflow/releases) and open it.
 
@@ -298,7 +316,12 @@ git clone --depth 1 https://github.com/js-lover/uxflow.git
 rm -rf uxflow/.git
 ```
 
-Your agent picks it up from `AGENTS.md`; the CLI runs straight from `uxflow/scripts/uxflow.py`.
+Your agent picks it up from `AGENTS.md`; the CLI runs straight from
+`uxflow/scripts/uxflow.py` with nothing installed.
+
+All three run the same code. `pip install uxflow` pulls in no dependencies — standard
+library only is a feature, because the tool has to work inside whatever environment an
+agent happens to be in, with no resolver step.
 
 ## Contributing
 

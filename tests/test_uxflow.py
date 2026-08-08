@@ -515,6 +515,41 @@ class TestDiff(unittest.TestCase):
                         len([f for f in rb["findings"] if f["severity"] == "high"]))
 
 
+class TestPackaging(unittest.TestCase):
+    """The same code has to serve two entry points: the installed console script
+    (`uxflow` -> uxflow.cli:main) and a vendored checkout run with no install."""
+
+    def test_cli_module_lives_inside_the_package(self):
+        from uxflow_lib import cli
+        self.assertTrue(callable(cli.main))
+
+    def test_package_modules_use_relative_imports(self):
+        """An absolute `import uxflow_lib` would break once installed as `uxflow`."""
+        pkg = os.path.join(ROOT, "scripts", "uxflow_lib")
+        for name in os.listdir(pkg):
+            if not name.endswith(".py"):
+                continue
+            with open(os.path.join(pkg, name), encoding="utf-8") as fh:
+                body = fh.read()
+            self.assertNotIn("from uxflow_lib import", body, name)
+            self.assertNotIn("import uxflow_lib", body, name)
+
+    def test_version_matches_pyproject(self):
+        from uxflow_lib import __version__
+        with open(os.path.join(ROOT, "pyproject.toml"), encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("version = "):
+                    self.assertEqual(line.split('"')[1], __version__)
+                    return
+        self.fail("pyproject.toml has no version")
+
+    def test_shim_stays_thin(self):
+        """Logic in the shim would only run for vendored users, not installed ones."""
+        with open(os.path.join(ROOT, "scripts", "uxflow.py"), encoding="utf-8") as fh:
+            code = [l for l in fh if l.strip() and not l.strip().startswith("#")]
+        self.assertLess(len(code), 30)
+
+
 class TestCLI(unittest.TestCase):
     def test_end_to_end(self):
         import shutil

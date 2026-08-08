@@ -85,6 +85,9 @@ uxflow.py id       <route> [component]                  mint a stable node id
 
 Requires Python 3.8+. No third-party packages, no network access, no build step.
 
+If `uxflow` is on PATH (`pip install uxflow`), use it directly; otherwise call the
+vendored shim, `python3 uxflow/scripts/uxflow.py`. Same code either way.
+
 ## If you are a human
 
 Everything above works without an agent. Write the JSON yourself and run the CLI.
