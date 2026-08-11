@@ -25,8 +25,8 @@ jobs:
           - { python: '3.12', os: ubuntu-latest }
           - { python: '3.13', os: ubuntu-latest }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - name: Unit tests
@@ -36,8 +36,8 @@ jobs:
     name: generated output is reproducible
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -72,7 +72,7 @@ jobs:
           python3 scripts/flowlint.py render examples/checkout.flow.json -o /tmp/b
           diff -r /tmp/a /tmp/b
 
-      - name: check must reject a tampered IR
+      - name: stale must reject a tampered IR
         run: |
           python3 - <<'PY'
           import sys; sys.path.insert(0, "scripts")
@@ -81,17 +81,27 @@ jobs:
           d["nodes"][1]["label"] = "Tampered"
           ir.dump(d, "/tmp/tampered.flow.json")
           PY
-          cp examples/output/.flowlint.lock.json /tmp/ || true
-          if python3 scripts/flowlint.py check /tmp/tampered.flow.json -o examples/output; then
-            echo "::error::check passed on a tampered IR"; exit 1
+          if python3 scripts/flowlint.py stale /tmp/tampered.flow.json -o examples/output; then
+            echo "::error::stale accepted an IR whose hash does not match the lock file"
+            exit 1
+          fi
+
+      # `check` lints; it must not fail a healthy flow just because findings exist.
+      # Only --fail-on-high turns findings into a non-zero exit.
+      - name: check exits on high findings only when asked
+        run: |
+          python3 scripts/flowlint.py check examples/checkout.flow.json
+          if python3 scripts/flowlint.py check examples/checkout.flow.json --fail-on-high; then
+            echo "::error::--fail-on-high did not fail on a flow with high findings"
+            exit 1
           fi
 
   lint:
     name: syntax + schema
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Byte-compile all sources

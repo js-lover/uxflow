@@ -600,6 +600,70 @@ class TestPackaging(unittest.TestCase):
                     return
         self.fail("pyproject.toml has no version")
 
+    def test_documented_commands_all_exist(self):
+        """Every subcommand named in a workflow or a doc must be a real one.
+
+        Renaming `check` to `stale` left the CI workflow calling a command that
+        had quietly changed meaning; the step passed a tampered IR and the build
+        broke. Grep the tree for invocations and check them against the parser.
+        """
+        from flowlint_lib import cli
+        parser = cli.build_parser()
+        known = set()
+        for action in parser._subparsers._group_actions:
+            known |= set(action.choices)
+
+        # Only real invocations. Prose like "the flowlint repository" must not
+        # be mistaken for a command, so the bare form has to sit at the start of
+        # a line or right after a backtick -- where a command actually appears.
+        invocation = re.compile(r"\bflowlint(?:\.py)? ([a-z][a-z-]*)")
+        skip = {"install"}                                 # `pip install flowlint`
+        roots = [os.path.join(ROOT, p) for p in
+                 (".github/workflows", "examples/ci", "README.md", "SKILL.md",
+                  "AGENTS.md", "CONTRIBUTING.md", "references")]
+        seen = set()
+        for root in roots:
+            paths = [root]
+            if os.path.isdir(root):
+                paths = [os.path.join(root, f) for f in sorted(os.listdir(root))]
+            for path in paths:
+                if not os.path.isfile(path):
+                    continue
+                with open(path, encoding="utf-8") as fh:
+                    body = fh.read()
+                for line in self._command_lines(path, body):
+                    for word in invocation.findall(line):
+                        if word in skip:
+                            continue
+                        seen.add(word)
+                        self.assertIn(word, known,
+                                      "%s calls `flowlint %s`, which is not a command"
+                                      % (os.path.relpath(path, ROOT), word))
+        self.assertIn("check", seen)      # the docs must actually show the main command
+        self.assertIn("stale", seen)
+
+    @staticmethod
+    def _command_lines(path, body):
+        """Only places a command can actually live.
+
+        Scanning whole files means matching prose -- "flowlint reads an existing
+        codebase" is not an invocation of `flowlint reads`. So: fenced code blocks
+        and inline backticks in Markdown, and `flowlint.py` lines in YAML.
+        """
+        if path.endswith((".yml", ".yaml")):
+            return [l for l in body.splitlines() if "flowlint.py" in l]
+
+        lines, fenced = [], False
+        for line in body.splitlines():
+            if line.lstrip().startswith("```"):
+                fenced = not fenced
+                continue
+            if fenced:
+                lines.append(line)
+            else:
+                lines.extend(re.findall(r"`([^`]*)`", line))
+        return lines
+
     def test_shim_stays_thin(self):
         """Logic in the shim would only run for vendored users, not installed ones."""
         with open(os.path.join(ROOT, "scripts", "flowlint.py"), encoding="utf-8") as fh:
