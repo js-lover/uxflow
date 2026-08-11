@@ -10,5 +10,11 @@ __pycache__/
 /build/
 *.egg-info/
 
-# Generated diagrams are committed on purpose -- that is the point of `uxflow check`.
-# Do NOT ignore docs/ux-flows/*.drawio, *.mmd, *.svg or .uxflow.lock.json.
+# Local working notes and built bundles: useful to keep next to the checkout,
+# not part of the project.
+/notes/
+*.skill
+
+# Generated diagrams are committed on purpose -- that is the point of
+# `flowlint stale`. Do NOT ignore docs/ux-flows/*.drawio, *.mmd, *.svg or
+# .flowlint.lock.json.
