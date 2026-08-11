@@ -1,32 +1,32 @@
-# Guest checkout (proposed) — UX raporu
+# Guest checkout (proposed) — flow report
 
-**Uygulama:** Example Shop · **Stack:** `nextjs` · **Commit:** `proposal` · **Akış:** `checkout-proposed`
+**App:** Example Shop · **Stack:** `nextjs` · **Commit:** `proposal` · **Flow:** `checkout-proposed`
 
 > Same goal, with the forced signup removed, the failure branches modelled, and the promo interstitial moved off the critical path.
 
-## Özet
+## Summary
 
-Bu akışta 2 bulgu var; 1 tanesi orta öncelikli. Ana yol 7 adım.
+This flow has 2 findings: 1 of medium priority. The primary path is 7 steps.
 
 | | | |
 | --- | ---: | --- |
-| 🔴 **Yüksek öncelikli** | 0 | kullanıcıyı doğrudan etkiliyor |
-| 🟠 Orta | 1 | dönüşüme mal oluyor |
-| 🟡 Düşük | 1 | cilalama |
+| 🔴 **High** | 0 | affects users directly |
+| 🟠 Medium | 1 | costs conversion |
+| 🟡 Low | 1 | polish |
 | | | |
-| Ana yol | 7 adım | kullanıcının geçtiği nokta sayısı |
-| Çıkmaz | 0 | kullanıcının takıldığı yol sayısı |
+| Primary path | 7 steps | places the user passes through |
+| Stuck | 0 | ways to end up going nowhere |
 
-## Ne yapmalı
+## What to do
 
-Önem, güven ve efor sırasına dizilmiş hâli. Yukarıdan aşağı çalışmak en hızlı iyileşmeyi verir; her madde doğrudan bir iş kaydına dönüştürülebilir.
+Ordered by severity, confidence and effort. Working top to bottom gives the fastest improvement, and each row is ready to become a ticket.
 
-| # | ne | nerede | efor | detay |
+| # | what | where | effort | detail |
 | ---: | --- | --- | --- | --- |
-| 1 | 🟠 Ana yol gereğinden uzun | Guest checkout (proposed)<br>— | L | [UXF-DEEP-2678](#uxf-deep-2678) |
-| 2 | 🟡 Haritanın bir kısmı doğrulanamıyor | Guest checkout (proposed)<br>— | S | [UXF-SRC-255A](#uxf-src-255a) |
+| 1 | 🟠 The primary path is longer than it needs to be | Guest checkout (proposed)<br>— | L | [UXF-DEEP-2678](#uxf-deep-2678) |
+| 2 | 🟡 Part of this map cannot be verified | Guest checkout (proposed)<br>— | S | [UXF-SRC-255A](#uxf-src-255a) |
 
-## Akış
+## The flow
 
 ```mermaid
 %%{init: {'flowchart': {'curve': 'basis'}, 'theme': 'base'}}%%
@@ -84,97 +84,97 @@ flowchart TD
     class orders_db neutral;
 ```
 
-*Düzenlenebilir sürüm: `checkout-proposed.drawio` — [diagrams.net](https://app.diagrams.net) ile aç. İkinci sekmede notlu görünüm var.*
+*Editable version: `checkout-proposed.drawio` — open it in [diagrams.net](https://app.diagrams.net). The second tab carries the annotations.*
 
-## Ana yol
+## Primary path
 
-Kullanıcının hedefe ulaşmak için izlediği en uzun tam yolculuk — 7 adım:
+The longest complete journey a user takes to reach the goal — 7 steps:
 
-- *başlangıç* — Taps Checkout in cart
-1. **Cart**  — 1 dokunuş
-2. **Contact + shipping**  — 1 dokunuş, 5 zorunlu alan
-3. **POST /api/shipping/quote**  — bekleme
-4. **Payment**  — 2 dokunuş, 4 zorunlu alan
+- *entry* — Taps Checkout in cart
+1. **Cart**  — 1 tap
+2. **Contact + shipping**  — 1 tap, 5 required fields
+3. **POST /api/shipping/quote**  — waits
+4. **Payment**  — 2 taps, 4 required fields
 5. **3-D Secure (bank page)**
 6. **POST /api/orders**
 7. **Order confirmed**
-- *hedef* — Order placed
+- *goal* — Order placed
 
-## Ölçümler
+## Metrics
 
-| | ölçüm | değer | yorum |
+| | metric | value | reading |
 | :-: | --- | ---: | --- |
-| ! | Ana yol adım sayısı | 7 | 6 adımın üzerinde — her ek adım terk oranını artırır |
-| ✓ | Ana yoldaki ekran sayısı | 4 | makul |
-| ✓ | Ana yoldaki etkileşim | 4 | düşük etkileşim yükü |
-| ! | Zorunlu form alanı (toplam) | 9 | her zorunlu alan bir vazgeçme fırsatı — hepsi gerçekten zorunlu mu? |
-| ✓ | Başarısızlıkla biten yol sayısı | 0 | kullanıcının kilitlendiği yol yok |
-| ✓ | Hata dalı kapsamı | 100% | ağ çağrılarının tamamının hata dalı modellenmiş |
-| ✗ | Kaynak çapası kapsamı | 0% | düğümlerin önemli bir kısmı koda dayanmıyor — haritaya temkinli yaklaş |
+| ! | Steps on the primary path | 7 | above six — every extra step costs users |
+| ✓ | Screens on the primary path | 4 | reasonable |
+| ✓ | Interactions on the primary path | 4 | light interaction load |
+| ! | Required form fields (total) | 9 | every required field is a chance to give up — are they all needed? |
+| ✓ | Ways to end up stuck | 0 | no point where the user gets trapped |
+| ✓ | Error-branch coverage | 100% | every network call has a modelled failure path |
+| ✗ | Source-anchor coverage | 0% | a large share of nodes is not grounded in code — read this map with care |
 
-**Akış büyüklüğü:** 13 düğüm · 17 geçiş · 5 ekran · 2 ağ çağrısı · 0 karar noktası · 6 hata dalı
+**Size:** 13 nodes · 17 transitions · 5 screens · 2 network calls · 0 decisions · 6 error branches
 
-## Bulgular (2)
+## Findings (2)
 
 <a id="uxf-deep-2678"></a>
 
-### 🟠 Ana yol gereğinden uzun
+### 🟠 The primary path is longer than it needs to be
 
-`UXF-DEEP-2678` · **düğüm:** Guest checkout (proposed) · **önem:** orta · **güven:** kesin · **efor:** L (tasarım kararı gerekir)
+`UXF-DEEP-2678` · **node:** Guest checkout (proposed) · **severity:** medium · **confidence:** certain · **effort:** L (needs a design decision)
 
-**Ne oluyor**
+**What happens**
 
-Ana yol 7 adım (eşik 6).
+The primary path is 7 steps (threshold 6).
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Her ek adım kullanıcı kaybı üretir. Uzun akışlar özellikle mobilde ve ilk kullanımda belirgin şekilde daha düşük tamamlanma oranına sahiptir.
+Every additional step costs users. Long flows complete at measurably lower rates, especially on mobile and on first use.
 
-**Ne yapmalı**
+**What to do**
 
-Adımları birleştirmeyi dene: aynı ekranda toplanabilecek alanlar, sonraya ertelenebilecek kararlar, atlanabilecek onaylar.
+Look for steps to merge: fields that could share a screen, decisions that could be deferred, confirmations that could be dropped.
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-DEEP-2678`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-DEEP-2678`</sub>
 
 <a id="uxf-src-255a"></a>
 
-### 🟡 Haritanın bir kısmı doğrulanamıyor
+### 🟡 Part of this map cannot be verified
 
-`UXF-SRC-255A` · **düğüm:** Guest checkout (proposed) · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat)
+`UXF-SRC-255A` · **node:** Guest checkout (proposed) · **severity:** low · **confidence:** certain · **effort:** S (~1 hour)
 
-**Ne oluyor**
+**What happens**
 
-11 düğümde `source` alanı yok: Cart, Contact + shipping, POST /api/shipping/quote, Quote unavailable, Payment, 3-D Secure (bank page) ve 5 tane daha.
+11 nodes have no `source` anchor: Cart, Contact + shipping, POST /api/shipping/quote, Quote unavailable, Payment, 3-D Secure (bank page) ve 5 tane daha.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Bu düğümlerin koda dayandığı doğrulanamıyor. Okuyucu haritanın hangi kısmının gerçek, hangi kısmının varsayım olduğunu ayırt edemeyince tamamına duyduğu güven zayıflar.
+There is no way to confirm these nodes came from the code. When a reader cannot tell which parts are real and which are assumed, they trust the whole map less.
 
-**Ne yapmalı**
+**What to do**
 
-Her düğüme geldiği `dosya:satır` bilgisini ekle. Bu akış henüz yazılmamış bir tasarımsa (örneğin bir `-proposed` dosyası) bu bulgu beklenendir; `flowlint ignore` ile gerekçesiyle birlikte kabul et.
+Add the `file:line` each node came from. If this flow describes something not built yet — a `-proposed` file, for instance — this finding is expected; accept it with `flowlint ignore` and a reason.
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-SRC-255A`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-SRC-255A`</sub>
 
-## Bilgi notları
+## Notes
 
-Sorun değil, ama akışı okurken bilinmesi gerekenler.
+Not problems, but worth knowing when reading the flow.
 
-- **3-D Secure (bank page)** — Bu adımda kullanıcı uygulamadan çıkıp bir dış servise gidiyor. Kendi başına bir sorun değil, ama dönüş yollarının (iptal, hata) modellenmiş olması gerekir.
+- **3-D Secure (bank page)** — At this step the user leaves the app for an external service. That is not a problem in itself, but the return paths — cancellation and failure — need to be modelled.
 
-## Yöntem
+## Method
 
-Bu rapor `checkout-proposed.flow.json` dosyasından üretildi; o dosya da kod tabanı okunarak çıkarıldı.
+This report was generated from `checkout-proposed.flow.json`, which was in turn extracted by reading the codebase.
 
-- **Kapsam:** 13 düğüm, 17 geçiş, `proposal` commit'i
-- **İzlenebilirlik:** düğümlerin %0'i bir `dosya:satır` çapası taşıyor
-- **Bulgular yalnızca grafikten türetilir.** Uydurma yok: her bulgu ya grafiğin yapısından ya da koda dayanan bir etiketten gelir.
-- **Bilinmeyen:** gerçek kullanıcı davranışı bu analizin dışındadır. Kodun izin verdiği yollar çıkarılır, insanların hangisini seçtiği değil. Analytics'in yerine geçmez, onunla birlikte okunur.
-- **Dikkat:** bazı düğümler koda kadar izlenemiyor; bu bölümlere temkinli yaklaş.
+- **Scope:** 13 nodes, 17 transitions, at commit `proposal`
+- **Traceability:** 0% of nodes carry a `file:line` anchor
+- **Findings come only from the graph.** Nothing is invented: every finding follows either from the structure or from a tag grounded in code.
+- **Not covered:** what real users do. This extracts the paths the code permits, not the ones people choose. It complements analytics rather than replacing them.
+- **Caution:** some nodes could not be traced to code; treat those parts of the map with care.
 
-## Makine okuması için
+## Machine-readable summary
 
-<details><summary>Yapısal özet (JSON)</summary>
+<details><summary>JSON</summary>
 
 ```json
 {
@@ -225,7 +225,7 @@ Bu rapor `checkout-proposed.flow.json` dosyasından üretildi; o dosya da kod ta
       "node": "",
       "label": "Guest checkout (proposed)",
       "evidence": [],
-      "fix": "Adımları birleştirmeyi dene: aynı ekranda toplanabilecek alanlar, sonraya ertelenebilecek kararlar, atlanabilecek onaylar."
+      "fix": "Look for steps to merge: fields that could share a screen, decisions that could be deferred, confirmations that could be dropped."
     },
     {
       "id": "UXF-SRC-255A",
@@ -236,7 +236,7 @@ Bu rapor `checkout-proposed.flow.json` dosyasından üretildi; o dosya da kod ta
       "node": "",
       "label": "Guest checkout (proposed)",
       "evidence": [],
-      "fix": "Her düğüme geldiği `dosya:satır` bilgisini ekle. Bu akış henüz yazılmamış bir tasarımsa (örneğin bir `-proposed` dosyası) bu bulgu beklenendir; `flowlint ignore` ile gerekçesiyle birlikte kabul et."
+      "fix": "Add the `file:line` each node came from. If this flow describes something not built yet — a `-proposed` file, for instance — this finding is expected; accept it with `flowlint ignore` and a reason."
     }
   ],
   "suppressed": []

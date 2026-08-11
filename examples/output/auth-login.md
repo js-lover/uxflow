@@ -1,34 +1,34 @@
-# Login (Supabase OAuth + magic link) — UX raporu
+# Login (Supabase OAuth + magic link) — flow report
 
-**Uygulama:** Example App · **Stack:** `nextjs` · **Commit:** `a31a654` · **Akış:** `auth-login`
+**App:** Example App · **Stack:** `nextjs` · **Commit:** `a31a654` · **Flow:** `auth-login`
 
 > Reaching a protected route, signing in with Google OAuth or an emailed magic link, and returning through the auth callback.
 
-## Özet
+## Summary
 
-Bu akışta 4 bulgu var; 3 tanesi kullanıcıyı doğrudan etkileyen, 1 tanesi orta öncelikli. Ana yol 7 adım.
+This flow has 4 findings: 3 that affect users directly, 1 of medium priority. The primary path is 7 steps.
 
 | | | |
 | --- | ---: | --- |
-| 🔴 **Yüksek öncelikli** | 3 | kullanıcıyı doğrudan etkiliyor |
-| 🟠 Orta | 1 | dönüşüme mal oluyor |
-| 🟡 Düşük | 0 | cilalama |
+| 🔴 **High** | 3 | affects users directly |
+| 🟠 Medium | 1 | costs conversion |
+| 🟡 Low | 0 | polish |
 | | | |
-| Ana yol | 7 adım | kullanıcının geçtiği nokta sayısı |
-| Çıkmaz | 0 | kullanıcının takıldığı yol sayısı |
+| Primary path | 7 steps | places the user passes through |
+| Stuck | 0 | ways to end up going nowhere |
 
-## Ne yapmalı
+## What to do
 
-Önem, güven ve efor sırasına dizilmiş hâli. Yukarıdan aşağı çalışmak en hızlı iyileşmeyi verir; her madde doğrudan bir iş kaydına dönüştürülebilir.
+Ordered by severity, confidence and effort. Working top to bottom gives the fastest improvement, and each row is ready to become a ticket.
 
-| # | ne | nerede | efor | detay |
+| # | what | where | effort | detail |
 | ---: | --- | --- | --- | --- |
-| 1 | 🔴 Hata kullanıcıya gösterilmiyor | /login?error=auth<br>`app/auth/callback/route.ts:17` | S | [UXF-NOERR-0A7D](#uxf-noerr-0a7d) |
-| 2 | 🔴 Bant dışı bekleme, yeniden gönderim yok | Sign-in link sent (waiting for email)<br>`app/login/page.tsx:68` | S | [UXF-RESEND-A1AD](#uxf-resend-a1ad) |
-| 3 | 🔴 Dış servisten iptal/hata dönüşü modellenmemiş | Supabase Google OAuth<br>`app/login/page.tsx:20` | M | [UXF-EXT-E61B](#uxf-ext-e61b) |
-| 4 | 🟠 Ana yol gereğinden uzun | Login (Supabase OAuth + magic link)<br>— | L | [UXF-DEEP-2678](#uxf-deep-2678) |
+| 1 | 🔴 The error is never shown to the user | /login?error=auth<br>`app/auth/callback/route.ts:17` | S | [UXF-NOERR-0A7D](#uxf-noerr-0a7d) |
+| 2 | 🔴 Waiting on something out of band, with no way to resend | Sign-in link sent (waiting for email)<br>`app/login/page.tsx:68` | S | [UXF-RESEND-A1AD](#uxf-resend-a1ad) |
+| 3 | 🔴 No cancel or failure path back from an external service | Supabase Google OAuth<br>`app/login/page.tsx:20` | M | [UXF-EXT-E61B](#uxf-ext-e61b) |
+| 4 | 🟠 The primary path is longer than it needs to be | Login (Supabase OAuth + magic link)<br>— | L | [UXF-DEEP-2678](#uxf-deep-2678) |
 
-## Akış
+## The flow
 
 ```mermaid
 %%{init: {'flowchart': {'curve': 'basis'}, 'theme': 'base'}}%%
@@ -91,142 +91,142 @@ flowchart TD
     class auth_start,auth_guard,login_screen,google_oauth_action,supabase_google_oauth,auth_callback,exchange_session,app_home,auth_end happy;
 ```
 
-*Düzenlenebilir sürüm: `auth-login.drawio` — [diagrams.net](https://app.diagrams.net) ile aç. İkinci sekmede notlu görünüm var.*
+*Editable version: `auth-login.drawio` — open it in [diagrams.net](https://app.diagrams.net). The second tab carries the annotations.*
 
-## Ana yol
+## Primary path
 
-Kullanıcının hedefe ulaşmak için izlediği en uzun tam yolculuk — 7 adım:
+The longest complete journey a user takes to reach the goal — 7 steps:
 
-- *başlangıç* — Opens a protected route
+- *entry* — Opens a protected route
 1. **Signed in?**
-2. **Login page**  — 1 dokunuş
-3. **Tap: sign in with Google**  — 1 dokunuş
-4. **Supabase Google OAuth**  — bekleme
+2. **Login page**  — 1 tap
+3. **Tap: sign in with Google**  — 1 tap
+4. **Supabase Google OAuth**  — waits
 5. **GET /auth/callback**
 6. **Supabase session exchange**
 7. **Home**
-- *hedef* — App is usable
+- *goal* — App is usable
 
-## Ölçümler
+## Metrics
 
-| | ölçüm | değer | yorum |
+| | metric | value | reading |
 | :-: | --- | ---: | --- |
-| ! | Ana yol adım sayısı | 7 | 6 adımın üzerinde — her ek adım terk oranını artırır |
-| ✓ | Ana yoldaki ekran sayısı | 2 | makul |
-| ✓ | Ana yoldaki etkileşim | 2 | düşük etkileşim yükü |
-| ✓ | Zorunlu form alanı (toplam) | 1 | az sayıda zorunlu alan |
-| ✓ | Başarısızlıkla biten yol sayısı | 0 | kullanıcının kilitlendiği yol yok |
-| ✓ | Hata dalı kapsamı | 100% | ağ çağrılarının tamamının hata dalı modellenmiş |
-| ✓ | Kaynak çapası kapsamı | 100% | her düğüm koda kadar izlenebiliyor |
+| ! | Steps on the primary path | 7 | above six — every extra step costs users |
+| ✓ | Screens on the primary path | 2 | reasonable |
+| ✓ | Interactions on the primary path | 2 | light interaction load |
+| ✓ | Required form fields (total) | 1 | few required fields |
+| ✓ | Ways to end up stuck | 0 | no point where the user gets trapped |
+| ✓ | Error-branch coverage | 100% | every network call has a modelled failure path |
+| ✓ | Source-anchor coverage | 100% | every node traces back to a line of code |
 
-**Akış büyüklüğü:** 14 düğüm · 18 geçiş · 2 ekran · 2 ağ çağrısı · 1 karar noktası · 3 hata dalı
+**Size:** 14 nodes · 18 transitions · 2 screens · 2 network calls · 1 decisions · 3 error branches
 
-## Bulgular (4)
+## Findings (4)
 
 <a id="uxf-noerr-0a7d"></a>
 
-### 🔴 Hata kullanıcıya gösterilmiyor
+### 🔴 The error is never shown to the user
 
-`UXF-NOERR-0A7D` · **düğüm:** /login?error=auth · **önem:** yüksek · **güven:** kesin · **efor:** S (~1 saat) · **route:** `/login?error=auth`
+`UXF-NOERR-0A7D` · **node:** /login?error=auth · **severity:** high · **confidence:** certain · **effort:** S (~1 hour) · **route:** `/login?error=auth`
 
-**Ne oluyor**
+**What happens**
 
-«/login?error=auth» için bir hata yolu var ama kullanıcı arayüzünde bu hatayı gösteren hiçbir şey yok.
+There is a failure path for “/login?error=auth”, but nothing in the interface surfaces it.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Bir şey ters gittiğinde kullanıcı bunu öğrenemiyor. Boş ya da değişmemiş bir ekranla kalıyor, aynı işlemi tekrarlıyor, aynı sonucu alıyor. Sessiz terk edilmelerin en yaygın sebebi.
+When something goes wrong the user cannot tell. They are left with a blank or unchanged screen, repeat the same action, and get the same result. This is the most common cause of silent abandonment.
 
-**Ne yapmalı**
+**What to do**
 
-Hata durumunu arayüze bağla. Yönlendirmeyle taşınan hatalarda (`?error=...`) hedef sayfanın bu parametreyi okuduğundan emin ol — bu adım sıklıkla atlanır.
+Wire the error state into the UI. When the error travels by redirect (`?error=...`), make sure the destination page actually reads that parameter — this step is skipped surprisingly often.
 
-**Kanıt:** `app/auth/callback/route.ts:17` · `app/login/page.tsx:8` · `app/login/page.tsx:104`
+**Evidence:** `app/auth/callback/route.ts:17` · `app/login/page.tsx:8` · `app/login/page.tsx:104`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-NOERR-0A7D`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-NOERR-0A7D`</sub>
 
 <a id="uxf-resend-a1ad"></a>
 
-### 🔴 Bant dışı bekleme, yeniden gönderim yok
+### 🔴 Waiting on something out of band, with no way to resend
 
-`UXF-RESEND-A1AD` · **düğüm:** Sign-in link sent (waiting for email) · **önem:** yüksek · **güven:** güçlü ihtimal · **efor:** S (~1 saat)
+`UXF-RESEND-A1AD` · **node:** Sign-in link sent (waiting for email) · **severity:** high · **confidence:** likely · **effort:** S (~1 hour)
 
-**Ne oluyor**
+**What happens**
 
-«Sign-in link sent (waiting for email)» durumunda kullanıcı uygulama dışından gelecek bir şeyi (e-posta bağlantısı, SMS kodu) bekliyor, ama bu ekrandan yeniden gönderim ya da yöntem değiştirme yolu yok.
+At “Sign-in link sent (waiting for email)” the user is waiting for something delivered outside the app — an emailed link, an SMS code — and this screen offers no way to resend it or switch method.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-E-posta spam'e düştüyse ya da SMS gelmediyse kullanıcı tamamen kilitlenir. Elinde tek seçenek olarak baştan başlamak kalır — ki çoğu kişi bunu yapmaz, vazgeçer.
+If the email lands in spam or the SMS never arrives, the user is locked out completely. Their only option is to start over, and most people do not: they leave.
 
-**Ne yapmalı**
+**What to do**
 
-«Tekrar gönder» ekle (bir bekleme süresiyle) ve alternatif yönteme geçiş sun. Ayrıca kullanıcıya nereye gönderildiğini göster ki yanlış adres girdiyse fark etsin.
+Add a resend action with a cool-down, and offer an alternative method. Show where it was sent, too, so a mistyped address is visible.
 
-**Kanıt:** `app/login/page.tsx:68`
+**Evidence:** `app/login/page.tsx:68`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-RESEND-A1AD`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-RESEND-A1AD`</sub>
 
 <a id="uxf-ext-e61b"></a>
 
-### 🔴 Dış servisten iptal/hata dönüşü modellenmemiş
+### 🔴 No cancel or failure path back from an external service
 
-`UXF-EXT-E61B` · **düğüm:** Supabase Google OAuth · **önem:** yüksek · **güven:** güçlü ihtimal · **efor:** M (~yarım gün)
+`UXF-EXT-E61B` · **node:** Supabase Google OAuth · **severity:** high · **confidence:** likely · **effort:** M (~half a day)
 
-**Ne oluyor**
+**What happens**
 
-«Supabase Google OAuth» kullanıcıyı uygulamadan çıkarıyor, ama geri dönüşte yalnızca başarı yolu var. İptal ya da hata dönüşü için bir geçiş yok.
+“Supabase Google OAuth” hands the user off to another site, but only the success return is modelled. There is no transition for a cancellation or an error coming back.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Kullanıcı dış ekranda (OAuth izni, 3-D Secure, ödeme sağlayıcısı) «İptal» derse ya da hata alırsa nereye düştüğü belirsiz. Genelde başlangıç ekranına hiçbir açıklama olmadan geri gelir ve neyin yanlış gittiğini bilemez.
+If the user presses Cancel on the external screen — an OAuth consent page, 3-D Secure, a payment provider — or hits an error there, where they land is undefined. Typically they arrive back at the start with no explanation and no idea what went wrong.
 
-**Ne yapmalı**
+**What to do**
 
-Sağlayıcının iptal/hata dönüş parametresini oku (`error`, `error_description`, `denied`) ve kullanıcıya ne olduğunu söyleyen bir duruma yönlendir. Dönüş adresini bu durumları taşıyacak şekilde tasarla.
+Read the provider's cancel and error parameters (`error`, `error_description`, `denied`) and route to a state that tells the user what happened. Design the return URL to carry that information.
 
-**Kanıt:** `app/login/page.tsx:20`
+**Evidence:** `app/login/page.tsx:20`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-EXT-E61B`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-EXT-E61B`</sub>
 
 <a id="uxf-deep-2678"></a>
 
-### 🟠 Ana yol gereğinden uzun
+### 🟠 The primary path is longer than it needs to be
 
-`UXF-DEEP-2678` · **düğüm:** Login (Supabase OAuth + magic link) · **önem:** orta · **güven:** kesin · **efor:** L (tasarım kararı gerekir)
+`UXF-DEEP-2678` · **node:** Login (Supabase OAuth + magic link) · **severity:** medium · **confidence:** certain · **effort:** L (needs a design decision)
 
-**Ne oluyor**
+**What happens**
 
-Ana yol 7 adım (eşik 6).
+The primary path is 7 steps (threshold 6).
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Her ek adım kullanıcı kaybı üretir. Uzun akışlar özellikle mobilde ve ilk kullanımda belirgin şekilde daha düşük tamamlanma oranına sahiptir.
+Every additional step costs users. Long flows complete at measurably lower rates, especially on mobile and on first use.
 
-**Ne yapmalı**
+**What to do**
 
-Adımları birleştirmeyi dene: aynı ekranda toplanabilecek alanlar, sonraya ertelenebilecek kararlar, atlanabilecek onaylar.
+Look for steps to merge: fields that could share a screen, decisions that could be deferred, confirmations that could be dropped.
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-DEEP-2678`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-DEEP-2678`</sub>
 
-## Bilgi notları
+## Notes
 
-Sorun değil, ama akışı okurken bilinmesi gerekenler.
+Not problems, but worth knowing when reading the flow.
 
-- **Supabase Google OAuth** — Bu adımda kullanıcı uygulamadan çıkıp bir dış servise gidiyor. Kendi başına bir sorun değil, ama dönüş yollarının (iptal, hata) modellenmiş olması gerekir.  `app/login/page.tsx:20`
+- **Supabase Google OAuth** — At this step the user leaves the app for an external service. That is not a problem in itself, but the return paths — cancellation and failure — need to be modelled.  `app/login/page.tsx:20`
 
-## Yöntem
+## Method
 
-Bu rapor `auth-login.flow.json` dosyasından üretildi; o dosya da kod tabanı okunarak çıkarıldı.
+This report was generated from `auth-login.flow.json`, which was in turn extracted by reading the codebase.
 
-- **Kapsam:** 14 düğüm, 18 geçiş, `a31a654` commit'i
-- **İzlenebilirlik:** düğümlerin %100'i bir `dosya:satır` çapası taşıyor
-- **Bulgular yalnızca grafikten türetilir.** Uydurma yok: her bulgu ya grafiğin yapısından ya da koda dayanan bir etiketten gelir.
-- **Bilinmeyen:** gerçek kullanıcı davranışı bu analizin dışındadır. Kodun izin verdiği yollar çıkarılır, insanların hangisini seçtiği değil. Analytics'in yerine geçmez, onunla birlikte okunur.
+- **Scope:** 14 nodes, 18 transitions, at commit `a31a654`
+- **Traceability:** 100% of nodes carry a `file:line` anchor
+- **Findings come only from the graph.** Nothing is invented: every finding follows either from the structure or from a tag grounded in code.
+- **Not covered:** what real users do. This extracts the paths the code permits, not the ones people choose. It complements analytics rather than replacing them.
 
-## Makine okuması için
+## Machine-readable summary
 
-<details><summary>Yapısal özet (JSON)</summary>
+<details><summary>JSON</summary>
 
 ```json
 {
@@ -281,7 +281,7 @@ Bu rapor `auth-login.flow.json` dosyasından üretildi; o dosya da kod tabanı o
         "app/login/page.tsx:8",
         "app/login/page.tsx:104"
       ],
-      "fix": "Hata durumunu arayüze bağla. Yönlendirmeyle taşınan hatalarda (`?error=...`) hedef sayfanın bu parametreyi okuduğundan emin ol — bu adım sıklıkla atlanır."
+      "fix": "Wire the error state into the UI. When the error travels by redirect (`?error=...`), make sure the destination page actually reads that parameter — this step is skipped surprisingly often."
     },
     {
       "id": "UXF-RESEND-A1AD",
@@ -294,7 +294,7 @@ Bu rapor `auth-login.flow.json` dosyasından üretildi; o dosya da kod tabanı o
       "evidence": [
         "app/login/page.tsx:68"
       ],
-      "fix": "«Tekrar gönder» ekle (bir bekleme süresiyle) ve alternatif yönteme geçiş sun. Ayrıca kullanıcıya nereye gönderildiğini göster ki yanlış adres girdiyse fark etsin."
+      "fix": "Add a resend action with a cool-down, and offer an alternative method. Show where it was sent, too, so a mistyped address is visible."
     },
     {
       "id": "UXF-EXT-E61B",
@@ -307,7 +307,7 @@ Bu rapor `auth-login.flow.json` dosyasından üretildi; o dosya da kod tabanı o
       "evidence": [
         "app/login/page.tsx:20"
       ],
-      "fix": "Sağlayıcının iptal/hata dönüş parametresini oku (`error`, `error_description`, `denied`) ve kullanıcıya ne olduğunu söyleyen bir duruma yönlendir. Dönüş adresini bu durumları taşıyacak şekilde tasarla."
+      "fix": "Read the provider's cancel and error parameters (`error`, `error_description`, `denied`) and route to a state that tells the user what happened. Design the return URL to carry that information."
     },
     {
       "id": "UXF-DEEP-2678",
@@ -318,7 +318,7 @@ Bu rapor `auth-login.flow.json` dosyasından üretildi; o dosya da kod tabanı o
       "node": "",
       "label": "Login (Supabase OAuth + magic link)",
       "evidence": [],
-      "fix": "Adımları birleştirmeyi dene: aynı ekranda toplanabilecek alanlar, sonraya ertelenebilecek kararlar, atlanabilecek onaylar."
+      "fix": "Look for steps to merge: fields that could share a screen, decisions that could be deferred, confirmations that could be dropped."
     }
   ],
   "suppressed": []

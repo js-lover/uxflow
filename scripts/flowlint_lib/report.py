@@ -17,7 +17,7 @@ BADGE = {"good": "✓", "warn": "!", "bad": "✗", "info": "·"}
 SEV_BADGE = {"high": "🔴", "medium": "🟠", "low": "🟡"}
 
 
-def render(doc, report, embed_diagram=True, lang="tr"):
+def render(doc, report, embed_diagram=True):
     o = []
     _header(o, doc, report)
     _summary(o, report)
@@ -37,17 +37,17 @@ def render(doc, report, embed_diagram=True, lang="tr"):
 
 # ------------------------------------------------------------------- sections
 def _header(o, doc, report):
-    o.append("# %s — UX raporu" % doc["title"])
+    o.append("# %s — flow report" % doc["title"])
     o.append("")
     app = doc.get("app") or {}
     bits = []
     if app.get("name"):
-        bits.append("**Uygulama:** %s" % app["name"])
+        bits.append("**App:** %s" % app["name"])
     if app.get("stack"):
         bits.append("**Stack:** `%s`" % app["stack"])
     if app.get("commit"):
         bits.append("**Commit:** `%s`" % app["commit"])
-    bits.append("**Akış:** `%s`" % doc["id"])
+    bits.append("**Flow:** `%s`" % doc["id"])
     o.append(" · ".join(bits))
     if doc.get("description"):
         o.append("")
@@ -57,7 +57,7 @@ def _header(o, doc, report):
 
 def _summary(o, report):
     m, findings = report["metrics"], report["findings"]
-    o.append("## Özet")
+    o.append("## Summary")
     o.append("")
     o.append(report["headline"])
     o.append("")
@@ -66,33 +66,32 @@ def _summary(o, report):
               for s in ("high", "medium", "low")}
     o.append("| | | |")
     o.append("| --- | ---: | --- |")
-    o.append("| %s **Yüksek öncelikli** | %d | kullanıcıyı doğrudan etkiliyor |"
-             % (SEV_BADGE["high"], counts["high"]))
-    o.append("| %s Orta | %d | dönüşüme mal oluyor |" % (SEV_BADGE["medium"], counts["medium"]))
-    o.append("| %s Düşük | %d | cilalama |" % (SEV_BADGE["low"], counts["low"]))
+    o.append("| %s **High** | %d | affects users directly |" % (SEV_BADGE["high"], counts["high"]))
+    o.append("| %s Medium | %d | costs conversion |" % (SEV_BADGE["medium"], counts["medium"]))
+    o.append("| %s Low | %d | polish |" % (SEV_BADGE["low"], counts["low"]))
     o.append("| | | |")
-    o.append("| Ana yol | %d adım | kullanıcının geçtiği nokta sayısı |"
+    o.append("| Primary path | %d steps | places the user passes through |"
              % m["primary_path_steps"])
-    o.append("| Çıkmaz | %d | kullanıcının takıldığı yol sayısı |" % m["failure_exits"])
+    o.append("| Stuck | %d | ways to end up going nowhere |" % m["failure_exits"])
     o.append("")
 
 
 def _actions(o, report):
     findings = report["findings"]
-    o.append("## Ne yapmalı")
+    o.append("## What to do")
     o.append("")
     if not findings:
-        o.append("Bu akışta yapılacak bir şey çıkmadı. Kullanıcının kilitlendiği bir nokta, "
-                 "hata dalı eksik bir ağ çağrısı ya da ulaşılamayan bir ekran yok.")
+        o.append("Nothing to act on. No screen traps the user, no network call is "
+                 "missing its failure branch, no screen is unreachable.")
         o.append("")
         return
-    o.append("Önem, güven ve efor sırasına dizilmiş hâli. Yukarıdan aşağı çalışmak en hızlı "
-             "iyileşmeyi verir; her madde doğrudan bir iş kaydına dönüştürülebilir.")
+    o.append("Ordered by severity, confidence and effort. Working top to bottom gives "
+             "the fastest improvement, and each row is ready to become a ticket.")
     o.append("")
-    o.append("| # | ne | nerede | efor | detay |")
+    o.append("| # | what | where | effort | detail |")
     o.append("| ---: | --- | --- | --- | --- |")
     for i, f in enumerate(findings, 1):
-        where = f["label"] or f["node"] or "akış geneli"
+        where = f["label"] or f["node"] or "whole flow"
         src = "`%s`" % f["evidence"][0] if f["evidence"] else "—"
         o.append("| %d | %s %s | %s<br>%s | %s | [%s](#%s) |"
                  % (i, SEV_BADGE[f["severity"]], f["title"], _esc(where), src,
@@ -101,14 +100,15 @@ def _actions(o, report):
 
 
 def _diagram(o, doc):
-    o.append("## Akış")
+    o.append("## The flow")
     o.append("")
     o.append("```mermaid")
     o.append(mermaid.render(doc, annotated=False, with_source=False, header=False).rstrip())
     o.append("```")
     o.append("")
-    o.append("*Düzenlenebilir sürüm: `%s.drawio` — [diagrams.net](https://app.diagrams.net) "
-             "ile aç. İkinci sekmede notlu görünüm var.*" % doc["id"])
+    o.append("*Editable version: `%s.drawio` — open it in "
+             "[diagrams.net](https://app.diagrams.net). The second tab carries the "
+             "annotations.*" % doc["id"])
     o.append("")
 
 
@@ -116,10 +116,10 @@ def _entry_points(o, doc):
     starts = [n for n in doc["nodes"] if n["type"] == "start"]
     if len(starts) < 2:
         return
-    o.append("## Giriş noktaları")
+    o.append("## Entry points")
     o.append("")
-    o.append("Bu akışa %d ayrı yerden giriliyor. Aşağıdaki «Ana yol» yalnızca bunlardan "
-             "birini izler; diğerleri diyagramda görünür." % len(starts))
+    o.append("This flow is entered from %d separate places. The primary path below "
+             "follows only one of them; the others appear in the diagram." % len(starts))
     o.append("")
     for n in starts:
         src = "  `%s`" % n["source"] if n.get("source") else ""
@@ -132,9 +132,9 @@ def _journey(o, doc, report):
     if not path:
         return
     idx = ir.index(doc)
-    o.append("## Ana yol")
+    o.append("## Primary path")
     o.append("")
-    o.append("Kullanıcının hedefe ulaşmak için izlediği en uzun tam yolculuk — %d adım:"
+    o.append("The longest complete journey a user takes to reach the goal — %d steps:"
              % report["metrics"]["primary_path_steps"])
     o.append("")
     step = 0
@@ -144,27 +144,27 @@ def _journey(o, doc, report):
             continue
         if node["type"] in ("start", "end"):
             o.append("- *%s* — %s" % (
-                "başlangıç" if node["type"] == "start" else "hedef", node["label"]))
+                "entry" if node["type"] == "start" else "goal", node["label"]))
             continue
         step += 1
         ann = node.get("annotations") or {}
         extra = []
         if ann.get("taps"):
-            extra.append("%d dokunuş" % ann["taps"])
+            extra.append("%d tap%s" % (ann["taps"], "" if ann["taps"] == 1 else "s"))
         if ann.get("required_fields"):
-            extra.append("%d zorunlu alan" % ann["required_fields"])
+            extra.append("%d required field%s" % (
+                ann["required_fields"], "" if ann["required_fields"] == 1 else "s"))
         if ann.get("wait"):
-            extra.append("bekleme")
+            extra.append("waits")
         suffix = "  — %s" % ", ".join(extra) if extra else ""
         o.append("%d. **%s**%s" % (step, node["label"], suffix))
     o.append("")
 
 
 def _metrics(o, report):
-    m = report["metrics"]
-    o.append("## Ölçümler")
+    o.append("## Metrics")
     o.append("")
-    o.append("| | ölçüm | değer | yorum |")
+    o.append("| | metric | value | reading |")
     o.append("| :-: | --- | ---: | --- |")
     for b in report["benchmarks"]:
         if b["verdict"] == "info":
@@ -174,20 +174,20 @@ def _metrics(o, report):
     o.append("")
     size = {b["key"]: b["value"] for b in report["benchmarks"] if b["verdict"] == "info"}
     if size:
-        o.append("**Akış büyüklüğü:** " + " · ".join(
+        o.append("**Size:** " + " · ".join(
             "%d %s" % (size[k], label) for k, label in (
-                ("nodes", "düğüm"), ("edges", "geçiş"), ("screens", "ekran"),
-                ("api_calls", "ağ çağrısı"), ("decisions", "karar noktası"),
-                ("error_branches", "hata dalı")) if k in size))
+                ("nodes", "nodes"), ("edges", "transitions"), ("screens", "screens"),
+                ("api_calls", "network calls"), ("decisions", "decisions"),
+                ("error_branches", "error branches")) if k in size))
         o.append("")
 
 
 def _findings(o, report):
     findings = report["findings"]
-    o.append("## Bulgular (%d)" % len(findings))
+    o.append("## Findings (%d)" % len(findings))
     o.append("")
     if not findings:
-        o.append("Yapısal bir sorun bulunamadı.")
+        o.append("No structural problems found.")
         o.append("")
         return
 
@@ -197,34 +197,28 @@ def _findings(o, report):
         o.append("### %s %s" % (SEV_BADGE[f["severity"]], f["title"]))
         o.append("")
         meta = ["`%s`" % f["id"],
-                "**önem:** %s" % catalog.SEVERITY_LABEL[f["severity"]].lower(),
-                "**güven:** %s" % catalog.CONFIDENCE_LABEL.get(f["confidence"], f["confidence"]),
-                "**efor:** %s" % catalog.EFFORT_LABEL[f["effort"]]]
+                "**severity:** %s" % catalog.SEVERITY_LABEL[f["severity"]].lower(),
+                "**confidence:** %s" % catalog.CONFIDENCE_LABEL.get(f["confidence"],
+                                                                   f["confidence"]),
+                "**effort:** %s" % catalog.EFFORT_LABEL[f["effort"]]]
         if f["label"]:
-            meta.insert(1, "**düğüm:** %s" % f["label"])
+            meta.insert(1, "**node:** %s" % f["label"])
         if f["route"]:
             meta.append("**route:** `%s`" % f["route"])
         o.append(" · ".join(meta))
         o.append("")
-        if f["what"]:
-            o.append("**Ne oluyor**")
-            o.append("")
-            o.append(f["what"])
-            o.append("")
-        if f["impact"]:
-            o.append("**Kullanıcı ne yaşıyor**")
-            o.append("")
-            o.append(f["impact"])
-            o.append("")
-        if f["fix"]:
-            o.append("**Ne yapmalı**")
-            o.append("")
-            o.append(f["fix"])
-            o.append("")
+        for heading, key in (("What happens", "what"),
+                             ("What the user experiences", "impact"),
+                             ("What to do", "fix")):
+            if f[key]:
+                o.append("**%s**" % heading)
+                o.append("")
+                o.append(f[key])
+                o.append("")
         if f["evidence"]:
-            o.append("**Kanıt:** " + " · ".join("`%s`" % e for e in f["evidence"]))
+            o.append("**Evidence:** " + " · ".join("`%s`" % e for e in f["evidence"]))
             o.append("")
-        o.append("<sub>Kabul edip susturmak için: `flowlint ignore %s`</sub>" % f["id"])
+        o.append("<sub>Accept and silence with: `flowlint ignore %s`</sub>" % f["id"])
         o.append("")
 
 
@@ -232,9 +226,9 @@ def _informational(o, report):
     info = report.get("info") or []
     if not info:
         return
-    o.append("## Bilgi notları")
+    o.append("## Notes")
     o.append("")
-    o.append("Sorun değil, ama akışı okurken bilinmesi gerekenler.")
+    o.append("Not problems, but worth knowing when reading the flow.")
     o.append("")
     for i in info:
         o.append("- **%s** — %s%s" % (
@@ -246,12 +240,12 @@ def _suppressed(o, report):
     muted = report.get("suppressed") or []
     if not muted:
         return
-    o.append("## Kabul edilenler (%d)" % len(muted))
+    o.append("## Accepted (%d)" % len(muted))
     o.append("")
-    o.append("`.flowlintignore` dosyasında bastırılmış bulgular. Denetimi geçerler ama "
-             "kaybolmazlar — bilinçli kabul edildikleri kayıt altında.")
+    o.append("Findings silenced in `.flowlintignore`. They pass the audit but do not "
+             "disappear — the decision to accept them stays on the record.")
     o.append("")
-    o.append("| id | bulgu | düğüm |")
+    o.append("| id | finding | node |")
     o.append("| --- | --- | --- |")
     for f in muted:
         o.append("| `%s` | %s | %s |" % (f["id"], f["title"], _esc(f["label"] or f["node"])))
@@ -261,24 +255,24 @@ def _suppressed(o, report):
 def _method(o, doc, report):
     m = report["metrics"]
     app = doc.get("app") or {}
-    o.append("## Yöntem")
+    o.append("## Method")
     o.append("")
-    o.append("Bu rapor `%s.flow.json` dosyasından üretildi; o dosya da kod tabanı "
-             "okunarak çıkarıldı." % doc["id"])
+    o.append("This report was generated from `%s.flow.json`, which was in turn "
+             "extracted by reading the codebase." % doc["id"])
     o.append("")
-    o.append("- **Kapsam:** %d düğüm, %d geçiş%s"
+    o.append("- **Scope:** %d nodes, %d transitions%s"
              % (m["nodes"], m["edges"],
-                ", `%s` commit'i" % app["commit"] if app.get("commit") else ""))
-    o.append("- **İzlenebilirlik:** düğümlerin %%%d'i bir `dosya:satır` çapası taşıyor"
+                ", at commit `%s`" % app["commit"] if app.get("commit") else ""))
+    o.append("- **Traceability:** %d%% of nodes carry a `file:line` anchor"
              % m["source_coverage"])
-    o.append("- **Bulgular yalnızca grafikten türetilir.** Uydurma yok: her bulgu ya "
-             "grafiğin yapısından ya da koda dayanan bir etiketten gelir.")
-    o.append("- **Bilinmeyen:** gerçek kullanıcı davranışı bu analizin dışındadır. "
-             "Kodun izin verdiği yollar çıkarılır, insanların hangisini seçtiği değil. "
-             "Analytics'in yerine geçmez, onunla birlikte okunur.")
+    o.append("- **Findings come only from the graph.** Nothing is invented: every "
+             "finding follows either from the structure or from a tag grounded in code.")
+    o.append("- **Not covered:** what real users do. This extracts the paths the code "
+             "permits, not the ones people choose. It complements analytics rather than "
+             "replacing them.")
     if m["source_coverage"] < 100:
-        o.append("- **Dikkat:** bazı düğümler koda kadar izlenemiyor; bu bölümlere "
-                 "temkinli yaklaş.")
+        o.append("- **Caution:** some nodes could not be traced to code; treat those "
+                 "parts of the map with care.")
     o.append("")
 
 
@@ -300,9 +294,9 @@ def _machine(o, doc, report):
         ],
         "suppressed": [f["id"] for f in report.get("suppressed") or []],
     }
-    o.append("## Makine okuması için")
+    o.append("## Machine-readable summary")
     o.append("")
-    o.append("<details><summary>Yapısal özet (JSON)</summary>")
+    o.append("<details><summary>JSON</summary>")
     o.append("")
     o.append("```json")
     o.append(json.dumps(payload, ensure_ascii=False, indent=2))

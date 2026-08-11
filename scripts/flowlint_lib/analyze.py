@@ -179,8 +179,16 @@ def _structural(doc, out, inc, ends, reachable, raw):
 
 
 # ------------------------------------------------------------------ error paths
+# Node labels are written by whoever models the flow, in whatever language their
+# team works in, so this pattern deliberately spans several. Add stems for a new
+# language rather than assuming English -- a Turkish or German label is not a
+# reason to miss a locked-out user.
+#
+# The leading \b is not decoration: without it `lien` matched inside "client-side"
+# and flagged an unrelated redirect as an unanswered wait.
 _WAIT_HINT = re.compile(
-    r"(mail|e-?posta|email|link|bağlant|baglant|sms|kod|code|otp|magic)", re.I)
+    r"\b(mail|e-?posta|email|link|bağlant|baglant|sms|kod|code|otp|magic"
+    r"|enlace|correo|lien|courriel|verweis|bestätigung)", re.I)
 
 
 def _error_paths(doc, out, inc, raw):
@@ -201,7 +209,7 @@ def _error_paths(doc, out, inc, raw):
         # 3. waiting on something out of band with no resend
         #
         # Two guards against false positives, both learned the hard way:
-        #   * the state must follow a network call. "Bağlantı kopyalandı" mentions a
+        #   * the state must follow a network call. A label like "Link copied" mentions a
         #     link but nothing was sent, so there is nothing to resend.
         #   * a resend means going *back* to whatever produced this state. An edge
         #     that merely continues the journey (the emailed link finally being

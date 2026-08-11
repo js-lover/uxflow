@@ -305,15 +305,15 @@ class TestAudit(unittest.TestCase):
 
     def test_markdown_report_renders(self):
         md = report.render(self.doc, self.report)
-        self.assertIn("UX raporu", md)
-        self.assertIn("## Ana yol", md)
-        self.assertIn("## Ne yapmalı", md)
+        self.assertIn("flow report", md)
+        self.assertIn("## Primary path", md)
+        self.assertIn("## What to do", md)
         self.assertIn("src/app/checkout/declined/page.tsx:9", md)
 
     def test_report_ends_with_a_machine_readable_block(self):
         """An agent should not have to parse prose to get the facts."""
         md = report.render(self.doc, self.report)
-        self.assertIn("## Makine okuması için", md)
+        self.assertIn("## Machine-readable summary", md)
         blob = md.split("```json", 1)[1].split("```", 1)[0]
         payload = json.loads(blob)
         self.assertEqual(payload["flow"], self.doc["id"])
@@ -447,6 +447,21 @@ class TestNoFalsePositives(unittest.TestCase):
             [{"from": "s", "to": "btn", "kind": "happy"},
              {"from": "btn", "to": "copied", "kind": "happy"},
              {"from": "copied", "to": "e", "kind": "happy"}])
+        self.assertNotIn("waiting_no_resend", codes)
+
+    def test_wait_hint_does_not_match_inside_other_words(self):
+        """`lien` once matched inside "client-side" and flagged a plain redirect."""
+        codes = self._codes(
+            [self._n("s", "start", "B"), self._n("api", "api", "POST /auth"),
+             self._n("redir", "state", "/login?error=auth",
+                     annotations={"note": "the only visible error comes from "
+                                          "client-side auth calls"}),
+             self._n("login", "screen", "Login"), self._n("e", "end", "Done")],
+            [{"from": "s", "to": "api", "kind": "happy"},
+             {"from": "api", "to": "redir", "kind": "error"},
+             {"from": "api", "to": "e", "kind": "happy"},
+             {"from": "redir", "to": "login", "kind": "neutral"},
+             {"from": "login", "to": "api", "kind": "happy"}])
         self.assertNotIn("waiting_no_resend", codes)
 
     def test_magic_link_without_resend_is_caught(self):
@@ -599,6 +614,32 @@ class TestPackaging(unittest.TestCase):
                     self.assertEqual(line.split('"')[1], __version__)
                     return
         self.fail("pyproject.toml has no version")
+
+    def test_user_facing_text_is_english(self):
+        """The report is what a stranger reads first, so it is part of the public
+        interface. This project was written in Turkish before it was published; the
+        guard exists so that does not creep back one string at a time.
+
+        `analyze._WAIT_HINT` is exempt: it matches labels users write in their own
+        language, and narrowing it to English would miss locked-out users.
+        """
+        turkish = re.compile(r"[çğıİöşüÇĞÖŞÜ]")
+        for name in ("catalog.py", "benchmarks.py", "report.py", "cli.py"):
+            path = os.path.join(ROOT, "scripts", "flowlint_lib", name)
+            with open(path, encoding="utf-8") as fh:
+                for lineno, line in enumerate(fh, 1):
+                    self.assertIsNone(turkish.search(line),
+                                      "%s:%d is not English: %s" % (name, lineno, line.strip()))
+
+    def test_every_catalog_entry_is_complete(self):
+        """A finding with no fix is noise, and a missing key would render as blank."""
+        for code, entry in catalog.CATALOG.items():
+            for key in ("title", "severity", "confidence", "effort", "what", "impact", "fix"):
+                self.assertIn(key, entry, code)
+                self.assertTrue(str(entry[key]).strip(), "%s.%s is empty" % (code, key))
+            self.assertIn(entry["severity"], ("high", "medium", "low"), code)
+            self.assertIn(entry["effort"], ("S", "M", "L"), code)
+            self.assertIn(entry["confidence"], ("certain", "likely"), code)
 
     def test_documented_commands_all_exist(self):
         """Every subcommand named in a workflow or a doc must be a real one.

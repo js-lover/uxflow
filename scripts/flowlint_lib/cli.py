@@ -19,7 +19,7 @@ Commands
 
 Default output per flow (3 files)
   <id>.flow.json   the IR you edit
-  <id>.drawio      multi-page: [Akış] [Akış + notlar] (+ [Değişim] after a diff)
+  <id>.drawio      multi-page: [Flow] [Flow + notes] (+ [Changes] after a diff)
   <id>.md          the report, with the diagram embedded as Mermaid
 
 No third-party packages. Python 3.8+.
@@ -120,23 +120,24 @@ def cmd_ignore(args):
     existing = _read_ignore(".")
     new = [i for i in args.ids if i not in existing]
     if not new:
-        print("Zaten bastırılmış: %s" % ", ".join(args.ids))
+        print("Already accepted: %s" % ", ".join(args.ids))
         return 0
     fresh = not os.path.exists(path)
     with open(path, "a", encoding="utf-8") as fh:
         if fresh:
-            fh.write("# flowlint -- kabul edilmiş bulgular.\n"
-                     "# Her satır bir bulgu id'si. Gerekçeyi yanına yaz; rapora yansır.\n\n")
+            fh.write("# flowlint -- accepted findings.\n"
+                     "# One finding id per line. Put the reason beside it; it shows in\n"
+                     "# the report.\n\n")
         for i in new:
             fh.write("%s%s\n" % (i, ("  # " + args.reason) if args.reason else ""))
-    print("%s dosyasına eklendi: %s" % (os.path.relpath(path), ", ".join(new)))
+    print("Added to %s: %s" % (os.path.relpath(path), ", ".join(new)))
     return 0
 
 
 # -------------------------------------------------------------------- commands
 def cmd_validate(args):
     for path, doc in _load(args.flows):
-        print("OK   %s  (%d düğüm, %d geçiş, hash %s)"
+        print("OK   %s  (%d nodes, %d transitions, hash %s)"
               % (path, len(doc["nodes"]), len(doc["edges"]), ir.content_hash(doc)))
     return 0
 
@@ -146,9 +147,9 @@ def _pages_for(doc):
     clean_lay = layout.compute(doc, annotated=False)
     annot_lay = layout.compute(doc, annotated=True)
     return [
-        {"name": "Akış", "doc": doc, "layout": clean_lay,
+        {"name": "Flow", "doc": doc, "layout": clean_lay,
          "annotated": False, "mode": "normal", "legend": True},
-        {"name": "Akış + notlar", "doc": doc, "layout": annot_lay,
+        {"name": "Flow + notes", "doc": doc, "layout": annot_lay,
          "annotated": True, "mode": "normal", "legend": True},
     ]
 
@@ -158,11 +159,11 @@ def cmd_render(args):
     formats = [f.strip() for f in (args.formats or DEFAULT_FORMATS).split(",") if f.strip()]
     bad = [f for f in formats if f not in ALL_FORMATS]
     if bad:
-        print("bilinmeyen format: %s" % ", ".join(bad), file=sys.stderr)
+        print("unknown format: %s" % ", ".join(bad), file=sys.stderr)
         return 2
     if getattr(args, "variant", None):
-        print("uyarı: --variant kaldırıldı. Her iki görünüm artık .drawio dosyasının "
-              "sekmelerinde. Bayrak yok sayıldı.", file=sys.stderr)
+        print("warning: --variant was removed. Both views are now tabs inside the "
+              ".drawio file. The flag was ignored.", file=sys.stderr)
 
     suppressed = _read_ignore(outdir)
     lock = _read_lock(outdir)
@@ -185,11 +186,11 @@ def cmd_render(args):
             _write(base + ".svg", svg.render(doc, lay, annotated=True))
 
         highs = [f for f in rep["findings"] if f["severity"] == "high"]
-        print("  → %d bulgu (%d yüksek), ana yol %d adım, %d çıkmaz"
+        print("  -> %d findings (%d high), primary path %d steps, %d dead ends"
               % (len(rep["findings"]), len(highs),
                  rep["metrics"]["primary_path_steps"], rep["metrics"]["failure_exits"]))
         if rep["suppressed"]:
-            print("  → %d bulgu bastırılmış (.flowlintignore)" % len(rep["suppressed"]))
+            print("  -> %d findings accepted (.flowlintignore)" % len(rep["suppressed"]))
         if args.fail_on_high and highs:
             exit_code = 1
 
@@ -222,25 +223,25 @@ def cmd_check(args):
             print(report.render(doc, rep, embed_diagram=False))
         else:
             mark = "✗" if highs else ("!" if findings else "✓")
-            print("%s %-24s %d bulgu (%d yüksek) · ana yol %d adım · %d çıkmaz"
+            print("%s %-24s %d findings (%d high) · primary path %d steps · %d dead ends"
                   % (mark, doc["id"], len(findings), len(highs),
                      rep["metrics"]["primary_path_steps"], rep["metrics"]["failure_exits"]))
             for f in findings:
                 where = f["evidence"][0] if f["evidence"] else (f["label"] or doc["id"])
                 print("    %s  %s — %s  [%s]"
                       % (SEVERITY_MARK[f["severity"]], f["title"],
-                         f["label"] or "akış geneli", where))
+                         f["label"] or "whole flow", where))
             if rep["suppressed"]:
-                print("    %d bulgu kabul edilmiş (.flowlintignore)" % len(rep["suppressed"]))
+                print("    %d findings accepted (.flowlintignore)" % len(rep["suppressed"]))
 
         if highs:
             worst = 1
     if not args.out and args.format != "full" and total == 0:
-        print("Sorun yok.")
+        print("No problems found.")
     return worst if args.fail_on_high else 0
 
 
-SEVERITY_MARK = {"high": "yüksek", "medium": "orta  ", "low": "düşük "}
+SEVERITY_MARK = {"high": "high  ", "medium": "medium", "low": "low   "}
 
 
 def cmd_diff(args):
@@ -249,7 +250,7 @@ def cmd_diff(args):
     merged, summary = diffing.diff(before, after)
 
     pages = _pages_for(after)
-    pages.append({"name": "Değişim", "doc": merged,
+    pages.append({"name": "Changes", "doc": merged,
                   "layout": layout.compute(merged, annotated=True),
                   "annotated": True, "mode": "diff", "legend": True})
     base = os.path.join(outdir, after["id"])
@@ -261,7 +262,7 @@ def cmd_diff(args):
     body += "\n" + diffing.to_markdown(before, after, summary)
     _write(base + ".md", body)
 
-    print("  → +%d / -%d / ~%d düğüm"
+    print("  -> +%d / -%d / ~%d nodes"
           % (len(summary["added"]), len(summary["removed"]), len(summary["changed"])))
     return 0
 
@@ -280,16 +281,17 @@ def cmd_stale(args):
             stale.append((doc["id"], recorded, current))
 
     if legacy:
-        print("Bu akışlar için kayıt yok (ilk çalıştırma ya da eski sürümden geçiş): %s"
+        print("No lock entry for these flows (first run, or upgraded from an older "
+              "version): %s"
               % ", ".join(legacy), file=sys.stderr)
-        print("`flowlint render` çalıştırıp sonucu commit et.", file=sys.stderr)
+        print("Run `flowlint render` and commit the result.", file=sys.stderr)
         return 1
     if stale:
-        print("Diyagramlar güncel değil. `flowlint render` çalıştırıp commit et:", file=sys.stderr)
+        print("Diagrams are out of date. Run `flowlint render` and commit:", file=sys.stderr)
         for fid, rec, cur in stale:
-            print("  %-24s kayıtlı=%s güncel=%s" % (fid, rec, cur), file=sys.stderr)
+            print("  %-24s locked=%s current=%s" % (fid, rec, cur), file=sys.stderr)
         return 1
-    print("Tüm diyagramlar güncel.")
+    print("All diagrams are up to date.")
     return 0
 
 
@@ -326,7 +328,7 @@ def cmd_init(args):
     doc["title"] = args.flow_id.replace("-", " ").replace("_", " ").title()
     path = os.path.join(outdir, args.flow_id + ".flow.json")
     if os.path.exists(path) and not args.force:
-        print("%s zaten var (--force ile üzerine yaz)" % path, file=sys.stderr)
+        print("%s already exists (use --force to overwrite)" % path, file=sys.stderr)
         return 1
     _write(path, json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
     return 0
@@ -343,17 +345,17 @@ def build_parser():
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    v = sub.add_parser("validate", help="IR dosyalarını doğrula")
+    v = sub.add_parser("validate", help="check a flow file for schema and integrity errors")
     v.add_argument("flows", nargs="+")
     v.set_defaults(func=cmd_validate)
 
-    r = sub.add_parser("render", help=".drawio + rapor üret")
+    r = sub.add_parser("render", help="write the diagram and the full report")
     r.add_argument("flows", nargs="+")
-    r.add_argument("-o", "--out", help="çıktı klasörü (varsayılan docs/ux-flows)")
+    r.add_argument("-o", "--out", help="output directory (default docs/ux-flows)")
     r.add_argument("--formats", default=DEFAULT_FORMATS,
-                   help="drawio,md,svg,mermaid (varsayılan: %s)" % DEFAULT_FORMATS)
+                   help="drawio,md,svg,mermaid (default: %s)" % DEFAULT_FORMATS)
     r.add_argument("--fail-on-high", action="store_true",
-                   help="yüksek önemli bulgu varsa 1 ile çık")
+                   help="exit 1 when a high-severity finding exists")
     r.add_argument("--variant", help=argparse.SUPPRESS)
     r.set_defaults(func=cmd_render)
 
@@ -361,38 +363,38 @@ def build_parser():
     # its plainest verb has to do. The staleness guard moved to `stale`.
     for name, hidden in (("check", False), ("audit", True)):
         a = sub.add_parser(name, help=argparse.SUPPRESS if hidden
-                           else "akışları denetle (asıl komut)")
+                           else "lint the flows -- the main command")
         a.add_argument("flows", nargs="+")
-        a.add_argument("-o", "--out", help="raporu buraya yaz (varsayılan: özet bas)")
+        a.add_argument("-o", "--out", help="write the report here (default: print a summary)")
         a.add_argument("--format", choices=["summary", "full"], default="summary",
-                       help="summary = CI için kısa liste, full = tam rapor")
+                       help="summary = a short list for CI, full = the whole report")
         a.add_argument("--fail-on-high", action="store_true",
-                       help="yüksek önemli bulgu varsa 1 ile çık")
+                       help="exit 1 when a high-severity finding exists")
         a.set_defaults(func=cmd_check)
 
-    d = sub.add_parser("diff", help="öncesi/sonrası karşılaştırma")
+    d = sub.add_parser("diff", help="before/after comparison")
     d.add_argument("before")
     d.add_argument("after")
     d.add_argument("-o", "--out")
     d.set_defaults(func=cmd_diff)
 
-    s = sub.add_parser("stale", help="CI: diyagramlar IR ile senkron mu")
+    s = sub.add_parser("stale", help="CI: are the diagrams in sync with their source")
     s.add_argument("flows", nargs="+")
     s.add_argument("-o", "--out")
     s.set_defaults(func=cmd_stale)
 
-    g = sub.add_parser("ignore", help="bulguyu kabul et ve sustur")
+    g = sub.add_parser("ignore", help="accept a finding and stop reporting it")
     g.add_argument("ids", nargs="+", metavar="FINDING-ID")
-    g.add_argument("--reason", help="gerekçe (dosyaya yorum olarak yazılır)")
+    g.add_argument("--reason", help="reason, written into the file as a comment")
     g.set_defaults(func=cmd_ignore)
 
-    i = sub.add_parser("init", help="yeni IR dosyası oluştur")
+    i = sub.add_parser("init", help="scaffold a new flow file")
     i.add_argument("flow_id")
     i.add_argument("-o", "--out")
     i.add_argument("--force", action="store_true")
     i.set_defaults(func=cmd_init)
 
-    n = sub.add_parser("id", help="route'tan stabil düğüm id'si üret")
+    n = sub.add_parser("id", help="mint a stable node id from a route")
     n.add_argument("route")
     n.add_argument("component", nargs="?", default="")
     n.set_defaults(func=cmd_id)

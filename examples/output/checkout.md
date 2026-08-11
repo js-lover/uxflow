@@ -1,42 +1,42 @@
-# Guest checkout — UX raporu
+# Guest checkout — flow report
 
-**Uygulama:** Example Shop · **Stack:** `nextjs` · **Commit:** `a1b2c3d` · **Akış:** `checkout`
+**App:** Example Shop · **Stack:** `nextjs` · **Commit:** `a1b2c3d` · **Flow:** `checkout`
 
 > From cart to order confirmation for a user who is not signed in.
 
-## Özet
+## Summary
 
-Bu akışta 12 bulgu var; 7 tanesi kullanıcıyı doğrudan etkileyen, 5 tanesi orta öncelikli. Kullanıcının hedefe ulaşamadan takıldığı 2 farklı yol tespit edildi. Ana yol 8 adım.
+This flow has 12 findings: 7 that affect users directly, 5 of medium priority. There are 2 distinct ways to end up stuck short of the goal. The primary path is 8 steps.
 
 | | | |
 | --- | ---: | --- |
-| 🔴 **Yüksek öncelikli** | 7 | kullanıcıyı doğrudan etkiliyor |
-| 🟠 Orta | 5 | dönüşüme mal oluyor |
-| 🟡 Düşük | 0 | cilalama |
+| 🔴 **High** | 7 | affects users directly |
+| 🟠 Medium | 5 | costs conversion |
+| 🟡 Low | 0 | polish |
 | | | |
-| Ana yol | 8 adım | kullanıcının geçtiği nokta sayısı |
-| Çıkmaz | 2 | kullanıcının takıldığı yol sayısı |
+| Primary path | 8 steps | places the user passes through |
+| Stuck | 2 | ways to end up going nowhere |
 
-## Ne yapmalı
+## What to do
 
-Önem, güven ve efor sırasına dizilmiş hâli. Yukarıdan aşağı çalışmak en hızlı iyileşmeyi verir; her madde doğrudan bir iş kaydına dönüştürülebilir.
+Ordered by severity, confidence and effort. Working top to bottom gives the fastest improvement, and each row is ready to become a ticket.
 
-| # | ne | nerede | efor | detay |
+| # | what | where | effort | detail |
 | ---: | --- | --- | --- | --- |
-| 1 | 🔴 Ağ çağrısının hata dalı yok | POST /api/orders<br>`src/app/api/orders/route.ts:11` | S | [UXF-NOERR-F6BC](#uxf-noerr-f6bc) |
-| 2 | 🔴 Çıkmaz: bu ekrandan hiçbir yere gidilemiyor | Payment declined<br>`src/app/checkout/declined/page.tsx:9` | M | [UXF-DEAD-6370](#uxf-dead-6370) |
-| 3 | 🔴 Geri dönüş yolu yok | Payment declined<br>`src/app/checkout/declined/page.tsx:9` | S | [UXF-NOBAC-CAD8](#uxf-nobac-cad8) |
-| 4 | 🔴 Geri dönüş yolu yok | Payment<br>`src/app/checkout/payment/page.tsx:24` | S | [UXF-NOBAC-279B](#uxf-nobac-279b) |
-| 5 | 🔴 Çıkmaz: bu ekrandan hiçbir yere gidilemiyor | Quote failed<br>`src/app/checkout/address/page.tsx:88` | M | [UXF-DEAD-7409](#uxf-dead-7409) |
-| 6 | 🔴 Hata sessizce yutuluyor | Quote failed<br>`src/app/checkout/address/page.tsx:88` | S | [UXF-SILEN-64E4](#uxf-silen-64e4) |
-| 7 | 🔴 Gereksiz zorunlu kayıt | Create an account<br>`src/app/signup/page.tsx:12` | L | [UXF-FORCE-7DE0](#uxf-force-7de0) |
-| 8 | 🟠 Ana yol gereğinden uzun | Guest checkout<br>— | L | [UXF-DEEP-2678](#uxf-deep-2678) |
-| 9 | 🟠 Engelleyici modal | Newsletter offer<br>`src/components/PromoModal.tsx:20` | S | [UXF-BLOCK-A675](#uxf-block-a675) |
-| 10 | 🟠 Atlanamayan ara ekran | Newsletter offer<br>`src/components/PromoModal.tsx:20` | S | [UXF-UNSKI-2022](#uxf-unski-2022) |
-| 11 | 🟠 Uzun form | Create an account<br>`src/app/signup/page.tsx:12` | M | [UXF-LONGF-CB43](#uxf-longf-cb43) |
-| 12 | 🟠 Zaten bilinen veri tekrar isteniyor | Shipping address<br>`src/app/checkout/address/page.tsx:30` | S | [UXF-DUPLI-BF5E](#uxf-dupli-bf5e) |
+| 1 | 🔴 Network call with no failure branch | POST /api/orders<br>`src/app/api/orders/route.ts:11` | S | [UXF-NOERR-F6BC](#uxf-noerr-f6bc) |
+| 2 | 🔴 Dead end: there is no way out of this screen | Payment declined<br>`src/app/checkout/declined/page.tsx:9` | M | [UXF-DEAD-6370](#uxf-dead-6370) |
+| 3 | 🔴 No way back | Payment declined<br>`src/app/checkout/declined/page.tsx:9` | S | [UXF-NOBAC-CAD8](#uxf-nobac-cad8) |
+| 4 | 🔴 No way back | Payment<br>`src/app/checkout/payment/page.tsx:24` | S | [UXF-NOBAC-279B](#uxf-nobac-279b) |
+| 5 | 🔴 Dead end: there is no way out of this screen | Quote failed<br>`src/app/checkout/address/page.tsx:88` | M | [UXF-DEAD-7409](#uxf-dead-7409) |
+| 6 | 🔴 The error is swallowed | Quote failed<br>`src/app/checkout/address/page.tsx:88` | S | [UXF-SILEN-64E4](#uxf-silen-64e4) |
+| 7 | 🔴 Sign-up required where it need not be | Create an account<br>`src/app/signup/page.tsx:12` | L | [UXF-FORCE-7DE0](#uxf-force-7de0) |
+| 8 | 🟠 The primary path is longer than it needs to be | Guest checkout<br>— | L | [UXF-DEEP-2678](#uxf-deep-2678) |
+| 9 | 🟠 Blocking modal | Newsletter offer<br>`src/components/PromoModal.tsx:20` | S | [UXF-BLOCK-A675](#uxf-block-a675) |
+| 10 | 🟠 Interstitial that cannot be skipped | Newsletter offer<br>`src/components/PromoModal.tsx:20` | S | [UXF-UNSKI-2022](#uxf-unski-2022) |
+| 11 | 🟠 Long form | Create an account<br>`src/app/signup/page.tsx:12` | M | [UXF-LONGF-CB43](#uxf-longf-cb43) |
+| 12 | 🟠 Asks again for data you already have | Shipping address<br>`src/app/checkout/address/page.tsx:30` | S | [UXF-DUPLI-BF5E](#uxf-dupli-bf5e) |
 
-## Akış
+## The flow
 
 ```mermaid
 %%{init: {'flowchart': {'curve': 'basis'}, 'theme': 'base'}}%%
@@ -97,319 +97,319 @@ flowchart TD
     class orders_db neutral;
 ```
 
-*Düzenlenebilir sürüm: `checkout.drawio` — [diagrams.net](https://app.diagrams.net) ile aç. İkinci sekmede notlu görünüm var.*
+*Editable version: `checkout.drawio` — open it in [diagrams.net](https://app.diagrams.net). The second tab carries the annotations.*
 
-## Ana yol
+## Primary path
 
-Kullanıcının hedefe ulaşmak için izlediği en uzun tam yolculuk — 8 adım:
+The longest complete journey a user takes to reach the goal — 8 steps:
 
-- *başlangıç* — Taps Checkout in cart
-1. **Cart**  — 1 dokunuş
+- *entry* — Taps Checkout in cart
+1. **Cart**  — 1 tap
 2. **Signed in?**
-3. **Shipping address**  — 2 dokunuş, 6 zorunlu alan
-4. **POST /api/shipping/quote**  — bekleme
-5. **Payment**  — 2 dokunuş, 4 zorunlu alan
+3. **Shipping address**  — 2 taps, 6 required fields
+4. **POST /api/shipping/quote**  — waits
+5. **Payment**  — 2 taps, 4 required fields
 6. **3-D Secure (bank page)**
 7. **POST /api/orders**
 8. **Order confirmed**
-- *hedef* — Order placed
+- *goal* — Order placed
 
-## Ölçümler
+## Metrics
 
-| | ölçüm | değer | yorum |
+| | metric | value | reading |
 | :-: | --- | ---: | --- |
-| ! | Ana yol adım sayısı | 8 | 6 adımın üzerinde — her ek adım terk oranını artırır |
-| ✓ | Ana yoldaki ekran sayısı | 4 | makul |
-| ✓ | Ana yoldaki etkileşim | 5 | düşük etkileşim yükü |
-| ✗ | Zorunlu form alanı (toplam) | 14 | form yükü yüksek; alanları böl ya da ertele |
-| ! | Başarısızlıkla biten yol sayısı | 2 | kullanıcının hedefe ulaşamadan takıldığı yollar var |
-| ! | Hata dalı kapsamı | 50% | bazı ağ çağrılarının başarısızlık yolu yok |
-| ✓ | Kaynak çapası kapsamı | 100% | her düğüm koda kadar izlenebiliyor |
+| ! | Steps on the primary path | 8 | above six — every extra step costs users |
+| ✓ | Screens on the primary path | 4 | reasonable |
+| ✓ | Interactions on the primary path | 5 | light interaction load |
+| ✗ | Required form fields (total) | 14 | heavy form load; split the fields or defer them |
+| ! | Ways to end up stuck | 2 | there are places a user stalls short of the goal |
+| ! | Error-branch coverage | 50% | some network calls have no failure path |
+| ✓ | Source-anchor coverage | 100% | every node traces back to a line of code |
 
-**Akış büyüklüğü:** 15 düğüm · 17 geçiş · 7 ekran · 2 ağ çağrısı · 1 karar noktası · 2 hata dalı
+**Size:** 15 nodes · 17 transitions · 7 screens · 2 network calls · 1 decisions · 2 error branches
 
-## Bulgular (12)
+## Findings (12)
 
 <a id="uxf-noerr-f6bc"></a>
 
-### 🔴 Ağ çağrısının hata dalı yok
+### 🔴 Network call with no failure branch
 
-`UXF-NOERR-F6BC` · **düğüm:** POST /api/orders · **önem:** yüksek · **güven:** kesin · **efor:** S (~1 saat)
+`UXF-NOERR-F6BC` · **node:** POST /api/orders · **severity:** high · **confidence:** certain · **effort:** S (~1 hour)
 
-**Ne oluyor**
+**What happens**
 
-«POST /api/orders» bir ağ çağrısı ama başarısızlık durumu için modellenmiş hiçbir geçiş yok.
+“POST /api/orders” is a network call, but no transition models what happens when it fails.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-İstek başarısız olduğunda (zaman aşımı, 500, çevrimdışı) kullanıcının ne göreceği belirsiz. Pratikte genelde hiçbir şey görmez: ekran donar ya da sessizce boş kalır. Kullanıcı ne olduğunu anlamaz, aynı işlemi tekrarlar.
+When the request fails — timeout, 500, offline — it is undefined what the user sees. In practice they usually see nothing: the screen freezes or silently stays empty. Not knowing what happened, they try again, and again.
 
-**Ne yapmalı**
+**What to do**
 
-Reddedilme durumunu yakala ve kullanıcıya göster: hata mesajı + yeniden dene. Zaman aşımını da ayrı düşün — bekleyen istek de bir başarısızlıktır.
+Catch the rejection and show it: a message plus a way to retry. Treat timeouts separately — a request that never returns is also a failure.
 
-**Kanıt:** `src/app/api/orders/route.ts:11`
+**Evidence:** `src/app/api/orders/route.ts:11`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-NOERR-F6BC`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-NOERR-F6BC`</sub>
 
 <a id="uxf-dead-6370"></a>
 
-### 🔴 Çıkmaz: bu ekrandan hiçbir yere gidilemiyor
+### 🔴 Dead end: there is no way out of this screen
 
-`UXF-DEAD-6370` · **düğüm:** Payment declined · **önem:** yüksek · **güven:** kesin · **efor:** M (~yarım gün) · **route:** `/checkout/declined`
+`UXF-DEAD-6370` · **node:** Payment declined · **severity:** high · **confidence:** certain · **effort:** M (~half a day) · **route:** `/checkout/declined`
 
-**Ne oluyor**
+**What happens**
 
-«Payment declined» düğümünden çıkan hiçbir geçiş yok. Akış burada bitiyor ama bu bir hedef (end) düğümü değil.
+Nothing leaves “Payment declined”. The flow stops here, and this is not a goal node.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Kullanıcı buraya geldiğinde uygulama onu terk ediyor. Yapabileceği tek şey tarayıcıyı kapatmak ya da uygulamayı öldürmek. Bu, oturumun sona erdiği yerdir.
+When a user reaches this point the app abandons them. Their only remaining option is to close the tab or kill the app. This is where sessions end.
 
-**Ne yapmalı**
+**What to do**
 
-Bu ekrandan ileri giden en az bir yol ekle: tamamlama, yeniden dene, ya da güvenli bir çıkış (ana sayfaya dön). Kullanıcının buraya neden geldiğini düşün ve oradan devam edebileceği bir eylem sun.
+Give this screen at least one way forward: complete, retry, or a safe exit back to somewhere useful. Ask why a user arrives here and offer the action that follows from it.
 
-**Kanıt:** `src/app/checkout/declined/page.tsx:9`
+**Evidence:** `src/app/checkout/declined/page.tsx:9`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-DEAD-6370`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-DEAD-6370`</sub>
 
 <a id="uxf-nobac-cad8"></a>
 
-### 🔴 Geri dönüş yolu yok
+### 🔴 No way back
 
-`UXF-NOBAC-CAD8` · **düğüm:** Payment declined · **önem:** yüksek · **güven:** kesin · **efor:** S (~1 saat) · **route:** `/checkout/declined`
+`UXF-NOBAC-CAD8` · **node:** Payment declined · **severity:** high · **confidence:** certain · **effort:** S (~1 hour) · **route:** `/checkout/declined`
 
-**Ne oluyor**
+**What happens**
 
-«Payment declined» ekranında geri dönüş imkânı yok (geri butonu gizli, hareket kapalı ya da yığın temizlenmiş).
+“Payment declined” offers no way back — the back control is hidden, the gesture is disabled, or the stack has been cleared.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Kullanıcı yanlışlıkla girdiği bir ekranda hapsoluyor. Mobilde bu, uygulamayı kapatmakla sonuçlanır. Kullanıcının kontrol hissini kaybettiği andır.
+A user who opens this screen by mistake is trapped in it. On mobile that ends with the app being force-closed. It is the moment a person stops feeling in control.
 
-**Ne yapmalı**
+**What to do**
 
-Geri/iptal imkânı ekle. Yığını kasıtlı temizliyorsan (ödeme sonrası gibi) en azından açık bir «bitti» çıkışı sun.
+Provide a back or cancel action. If clearing the stack is deliberate (after a payment, say), at least give an explicit way to finish.
 
-**Kanıt:** `src/app/checkout/declined/page.tsx:9`
+**Evidence:** `src/app/checkout/declined/page.tsx:9`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-NOBAC-CAD8`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-NOBAC-CAD8`</sub>
 
 <a id="uxf-nobac-279b"></a>
 
-### 🔴 Geri dönüş yolu yok
+### 🔴 No way back
 
-`UXF-NOBAC-279B` · **düğüm:** Payment · **önem:** yüksek · **güven:** kesin · **efor:** S (~1 saat) · **route:** `/checkout/payment`
+`UXF-NOBAC-279B` · **node:** Payment · **severity:** high · **confidence:** certain · **effort:** S (~1 hour) · **route:** `/checkout/payment`
 
-**Ne oluyor**
+**What happens**
 
-«Payment» ekranında geri dönüş imkânı yok (geri butonu gizli, hareket kapalı ya da yığın temizlenmiş).
+“Payment” offers no way back — the back control is hidden, the gesture is disabled, or the stack has been cleared.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Kullanıcı yanlışlıkla girdiği bir ekranda hapsoluyor. Mobilde bu, uygulamayı kapatmakla sonuçlanır. Kullanıcının kontrol hissini kaybettiği andır.
+A user who opens this screen by mistake is trapped in it. On mobile that ends with the app being force-closed. It is the moment a person stops feeling in control.
 
-**Ne yapmalı**
+**What to do**
 
-Geri/iptal imkânı ekle. Yığını kasıtlı temizliyorsan (ödeme sonrası gibi) en azından açık bir «bitti» çıkışı sun.
+Provide a back or cancel action. If clearing the stack is deliberate (after a payment, say), at least give an explicit way to finish.
 
-**Kanıt:** `src/app/checkout/payment/page.tsx:24`
+**Evidence:** `src/app/checkout/payment/page.tsx:24`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-NOBAC-279B`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-NOBAC-279B`</sub>
 
 <a id="uxf-dead-7409"></a>
 
-### 🔴 Çıkmaz: bu ekrandan hiçbir yere gidilemiyor
+### 🔴 Dead end: there is no way out of this screen
 
-`UXF-DEAD-7409` · **düğüm:** Quote failed · **önem:** yüksek · **güven:** kesin · **efor:** M (~yarım gün)
+`UXF-DEAD-7409` · **node:** Quote failed · **severity:** high · **confidence:** certain · **effort:** M (~half a day)
 
-**Ne oluyor**
+**What happens**
 
-«Quote failed» düğümünden çıkan hiçbir geçiş yok. Akış burada bitiyor ama bu bir hedef (end) düğümü değil.
+Nothing leaves “Quote failed”. The flow stops here, and this is not a goal node.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Kullanıcı buraya geldiğinde uygulama onu terk ediyor. Yapabileceği tek şey tarayıcıyı kapatmak ya da uygulamayı öldürmek. Bu, oturumun sona erdiği yerdir.
+When a user reaches this point the app abandons them. Their only remaining option is to close the tab or kill the app. This is where sessions end.
 
-**Ne yapmalı**
+**What to do**
 
-Bu ekrandan ileri giden en az bir yol ekle: tamamlama, yeniden dene, ya da güvenli bir çıkış (ana sayfaya dön). Kullanıcının buraya neden geldiğini düşün ve oradan devam edebileceği bir eylem sun.
+Give this screen at least one way forward: complete, retry, or a safe exit back to somewhere useful. Ask why a user arrives here and offer the action that follows from it.
 
-**Kanıt:** `src/app/checkout/address/page.tsx:88`
+**Evidence:** `src/app/checkout/address/page.tsx:88`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-DEAD-7409`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-DEAD-7409`</sub>
 
 <a id="uxf-silen-64e4"></a>
 
-### 🔴 Hata sessizce yutuluyor
+### 🔴 The error is swallowed
 
-`UXF-SILEN-64E4` · **düğüm:** Quote failed · **önem:** yüksek · **güven:** kesin · **efor:** S (~1 saat)
+`UXF-SILEN-64E4` · **node:** Quote failed · **severity:** high · **confidence:** certain · **effort:** S (~1 hour)
 
-**Ne oluyor**
+**What happens**
 
-«Quote failed» içindeki hata yakalama bloğu yalnızca log yazıyor; arayüzde hiçbir değişiklik olmuyor.
+The catch block in “Quote failed” only logs. Nothing changes in the interface.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Kullanıcı işlemin başarısız olduğunu asla öğrenmiyor. Daha kötüsü: başarılı olduğunu sanabilir. Veri kaybı ve destek talebi üreten hata sınıfı budur.
+The user never learns the operation failed. Worse, they may believe it succeeded. This is the class of bug that produces lost data and support tickets.
 
-**Ne yapmalı**
+**What to do**
 
-`catch` bloğunda kullanıcıya görünür bir sonuç üret. Log yeterli değil — logu kullanıcı okumuyor.
+Produce a visible result in the catch block. A log is not enough — the user does not read your logs.
 
-**Kanıt:** `src/app/checkout/address/page.tsx:88`
+**Evidence:** `src/app/checkout/address/page.tsx:88`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-SILEN-64E4`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-SILEN-64E4`</sub>
 
 <a id="uxf-force-7de0"></a>
 
-### 🔴 Gereksiz zorunlu kayıt
+### 🔴 Sign-up required where it need not be
 
-`UXF-FORCE-7DE0` · **düğüm:** Create an account · **önem:** yüksek · **güven:** güçlü ihtimal · **efor:** L (tasarım kararı gerekir) · **route:** `/signup`
+`UXF-FORCE-7DE0` · **node:** Create an account · **severity:** high · **confidence:** likely · **effort:** L (needs a design decision) · **route:** `/signup`
 
-**Ne oluyor**
+**What happens**
 
-«Create an account» kayıt zorunlu kılıyor, oysa arkasındaki servis misafir kullanıcıya da hizmet verebiliyor.
+“Create an account” requires an account, although the service behind it can serve a guest.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Kullanıcı henüz değeri görmeden hesap açmaya zorlanıyor. Bu, dönüşüm hunisindeki en pahalı adımdır — ölçülen düşüş genelde burada en yüksektir.
+The user is asked to commit before seeing any value. This is the most expensive step in a funnel; measured drop-off is usually highest right here.
 
-**Ne yapmalı**
+**What to do**
 
-Misafir olarak devam etme yolu aç. Hesap oluşturmayı işlem *sonrasına* taşı ve alanları o an elindeki verilerle doldur.
+Offer a guest path. Move account creation to *after* the action and pre-fill it with what you already collected.
 
-**Kanıt:** `src/app/signup/page.tsx:12`
+**Evidence:** `src/app/signup/page.tsx:12`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-FORCE-7DE0`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-FORCE-7DE0`</sub>
 
 <a id="uxf-deep-2678"></a>
 
-### 🟠 Ana yol gereğinden uzun
+### 🟠 The primary path is longer than it needs to be
 
-`UXF-DEEP-2678` · **düğüm:** Guest checkout · **önem:** orta · **güven:** kesin · **efor:** L (tasarım kararı gerekir)
+`UXF-DEEP-2678` · **node:** Guest checkout · **severity:** medium · **confidence:** certain · **effort:** L (needs a design decision)
 
-**Ne oluyor**
+**What happens**
 
-Ana yol 8 adım (eşik 6).
+The primary path is 8 steps (threshold 6).
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Her ek adım kullanıcı kaybı üretir. Uzun akışlar özellikle mobilde ve ilk kullanımda belirgin şekilde daha düşük tamamlanma oranına sahiptir.
+Every additional step costs users. Long flows complete at measurably lower rates, especially on mobile and on first use.
 
-**Ne yapmalı**
+**What to do**
 
-Adımları birleştirmeyi dene: aynı ekranda toplanabilecek alanlar, sonraya ertelenebilecek kararlar, atlanabilecek onaylar.
+Look for steps to merge: fields that could share a screen, decisions that could be deferred, confirmations that could be dropped.
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-DEEP-2678`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-DEEP-2678`</sub>
 
 <a id="uxf-block-a675"></a>
 
-### 🟠 Engelleyici modal
+### 🟠 Blocking modal
 
-`UXF-BLOCK-A675` · **düğüm:** Newsletter offer · **önem:** orta · **güven:** kesin · **efor:** S (~1 saat)
+`UXF-BLOCK-A675` · **node:** Newsletter offer · **severity:** medium · **confidence:** certain · **effort:** S (~1 hour)
 
-**Ne oluyor**
+**What happens**
 
-«Newsletter offer» akışın üzerine kapatılamayan bir katman açıyor.
+“Newsletter offer” opens a layer over the flow that cannot be dismissed.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Kullanıcı yapmak istediği işten koparılıyor ve geri dönemiyor. Kritik yolda bu doğrudan dönüşüm kaybıdır.
+The user is pulled away from what they were doing and cannot get back. On a critical path this is a direct loss of conversion.
 
-**Ne yapmalı**
+**What to do**
 
-Kapatma yolu ekle (Escape, dışına tıklama, kapat butonu). Kritik akışın üzerinde gösterme — işlem sonrasına taşı.
+Add a way out — Escape, click-outside, a close button. Better still, do not show it over a critical flow; move it to after the task.
 
-**Kanıt:** `src/components/PromoModal.tsx:20`
+**Evidence:** `src/components/PromoModal.tsx:20`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-BLOCK-A675`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-BLOCK-A675`</sub>
 
 <a id="uxf-unski-2022"></a>
 
-### 🟠 Atlanamayan ara ekran
+### 🟠 Interstitial that cannot be skipped
 
-`UXF-UNSKI-2022` · **düğüm:** Newsletter offer · **önem:** orta · **güven:** kesin · **efor:** S (~1 saat)
+`UXF-UNSKI-2022` · **node:** Newsletter offer · **severity:** medium · **confidence:** certain · **effort:** S (~1 hour)
 
-**Ne oluyor**
+**What happens**
 
-«Newsletter offer» geçilemeyen bir ara adım.
+“Newsletter offer” is an intermediate step with no way past it.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Ne yapmak istediğini bilen kullanıcı yavaşlatılıyor. Tekrar eden kullanımda bu birikerek rahatsızlığa dönüşüyor.
+A user who knows what they came for is slowed down. On repeat visits the annoyance compounds.
 
-**Ne yapmalı**
+**What to do**
 
-«Atla» ekle ya da yalnızca ilk kullanımda göster.
+Add a skip action, or show it only on first run.
 
-**Kanıt:** `src/components/PromoModal.tsx:20`
+**Evidence:** `src/components/PromoModal.tsx:20`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-UNSKI-2022`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-UNSKI-2022`</sub>
 
 <a id="uxf-longf-cb43"></a>
 
-### 🟠 Uzun form
+### 🟠 Long form
 
-`UXF-LONGF-CB43` · **düğüm:** Create an account · **önem:** orta · **güven:** kesin · **efor:** M (~yarım gün) · **route:** `/signup`
+`UXF-LONGF-CB43` · **node:** Create an account · **severity:** medium · **confidence:** certain · **effort:** M (~half a day) · **route:** `/signup`
 
-**Ne oluyor**
+**What happens**
 
-«Create an account» ekranında beşten fazla zorunlu alan var.
+“Create an account” has more than five required fields on one screen.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Her zorunlu alan bir vazgeçme fırsatı. Uzun formlar özellikle mobilde yüksek terk oranı üretir.
+Every required field is another chance to give up. Long forms have markedly higher abandonment, especially on mobile.
 
-**Ne yapmalı**
+**What to do**
 
-Gerçekten zorunlu olanları ayır. Kalanları sonraya ertele ya da opsiyonel yap. Bilinen verileri (konum, ülke, önceki sipariş) önceden doldur.
+Separate what is genuinely required. Defer or make optional the rest, and pre-fill anything you can infer — location, country, last order.
 
-**Kanıt:** `src/app/signup/page.tsx:12`
+**Evidence:** `src/app/signup/page.tsx:12`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-LONGF-CB43`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-LONGF-CB43`</sub>
 
 <a id="uxf-dupli-bf5e"></a>
 
-### 🟠 Zaten bilinen veri tekrar isteniyor
+### 🟠 Asks again for data you already have
 
-`UXF-DUPLI-BF5E` · **düğüm:** Shipping address · **önem:** orta · **güven:** güçlü ihtimal · **efor:** S (~1 saat) · **route:** `/checkout/address`
+`UXF-DUPLI-BF5E` · **node:** Shipping address · **severity:** medium · **confidence:** likely · **effort:** S (~1 hour) · **route:** `/checkout/address`
 
-**Ne oluyor**
+**What happens**
 
-«Shipping address» ekranı, uygulamanın akışın daha önceki bir adımında topladığı veriyi tekrar soruyor.
+“Shipping address” asks for information the app collected earlier in this flow.
 
-**Kullanıcı ne yaşıyor**
+**What the user experiences**
 
-Kullanıcı «bunu az önce yazmıştım» diye düşünüyor. Uygulamanın kendisini hatırlamadığı hissi güveni zedeliyor.
+The user thinks “I just typed this.” The sense that the app does not remember them erodes trust in everything else it does.
 
-**Ne yapmalı**
+**What to do**
 
-Önceki adımdan taşı ve alanı önceden doldur; düzenlenebilir bırak.
+Carry it over from the earlier step and pre-fill the field, leaving it editable.
 
-**Kanıt:** `src/app/checkout/address/page.tsx:30`
+**Evidence:** `src/app/checkout/address/page.tsx:30`
 
-<sub>Kabul edip susturmak için: `flowlint ignore UXF-DUPLI-BF5E`</sub>
+<sub>Accept and silence with: `flowlint ignore UXF-DUPLI-BF5E`</sub>
 
-## Bilgi notları
+## Notes
 
-Sorun değil, ama akışı okurken bilinmesi gerekenler.
+Not problems, but worth knowing when reading the flow.
 
-- **3-D Secure (bank page)** — Bu adımda kullanıcı uygulamadan çıkıp bir dış servise gidiyor. Kendi başına bir sorun değil, ama dönüş yollarının (iptal, hata) modellenmiş olması gerekir.  `src/lib/psp/redirect.ts:15`
+- **3-D Secure (bank page)** — At this step the user leaves the app for an external service. That is not a problem in itself, but the return paths — cancellation and failure — need to be modelled.  `src/lib/psp/redirect.ts:15`
 
-## Yöntem
+## Method
 
-Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı okunarak çıkarıldı.
+This report was generated from `checkout.flow.json`, which was in turn extracted by reading the codebase.
 
-- **Kapsam:** 15 düğüm, 17 geçiş, `a1b2c3d` commit'i
-- **İzlenebilirlik:** düğümlerin %100'i bir `dosya:satır` çapası taşıyor
-- **Bulgular yalnızca grafikten türetilir.** Uydurma yok: her bulgu ya grafiğin yapısından ya da koda dayanan bir etiketten gelir.
-- **Bilinmeyen:** gerçek kullanıcı davranışı bu analizin dışındadır. Kodun izin verdiği yollar çıkarılır, insanların hangisini seçtiği değil. Analytics'in yerine geçmez, onunla birlikte okunur.
+- **Scope:** 15 nodes, 17 transitions, at commit `a1b2c3d`
+- **Traceability:** 100% of nodes carry a `file:line` anchor
+- **Findings come only from the graph.** Nothing is invented: every finding follows either from the structure or from a tag grounded in code.
+- **Not covered:** what real users do. This extracts the paths the code permits, not the ones people choose. It complements analytics rather than replacing them.
 
-## Makine okuması için
+## Machine-readable summary
 
-<details><summary>Yapısal özet (JSON)</summary>
+<details><summary>JSON</summary>
 
 ```json
 {
@@ -463,7 +463,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/app/api/orders/route.ts:11"
       ],
-      "fix": "Reddedilme durumunu yakala ve kullanıcıya göster: hata mesajı + yeniden dene. Zaman aşımını da ayrı düşün — bekleyen istek de bir başarısızlıktır."
+      "fix": "Catch the rejection and show it: a message plus a way to retry. Treat timeouts separately — a request that never returns is also a failure."
     },
     {
       "id": "UXF-DEAD-6370",
@@ -476,7 +476,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/app/checkout/declined/page.tsx:9"
       ],
-      "fix": "Bu ekrandan ileri giden en az bir yol ekle: tamamlama, yeniden dene, ya da güvenli bir çıkış (ana sayfaya dön). Kullanıcının buraya neden geldiğini düşün ve oradan devam edebileceği bir eylem sun."
+      "fix": "Give this screen at least one way forward: complete, retry, or a safe exit back to somewhere useful. Ask why a user arrives here and offer the action that follows from it."
     },
     {
       "id": "UXF-NOBAC-CAD8",
@@ -489,7 +489,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/app/checkout/declined/page.tsx:9"
       ],
-      "fix": "Geri/iptal imkânı ekle. Yığını kasıtlı temizliyorsan (ödeme sonrası gibi) en azından açık bir «bitti» çıkışı sun."
+      "fix": "Provide a back or cancel action. If clearing the stack is deliberate (after a payment, say), at least give an explicit way to finish."
     },
     {
       "id": "UXF-NOBAC-279B",
@@ -502,7 +502,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/app/checkout/payment/page.tsx:24"
       ],
-      "fix": "Geri/iptal imkânı ekle. Yığını kasıtlı temizliyorsan (ödeme sonrası gibi) en azından açık bir «bitti» çıkışı sun."
+      "fix": "Provide a back or cancel action. If clearing the stack is deliberate (after a payment, say), at least give an explicit way to finish."
     },
     {
       "id": "UXF-DEAD-7409",
@@ -515,7 +515,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/app/checkout/address/page.tsx:88"
       ],
-      "fix": "Bu ekrandan ileri giden en az bir yol ekle: tamamlama, yeniden dene, ya da güvenli bir çıkış (ana sayfaya dön). Kullanıcının buraya neden geldiğini düşün ve oradan devam edebileceği bir eylem sun."
+      "fix": "Give this screen at least one way forward: complete, retry, or a safe exit back to somewhere useful. Ask why a user arrives here and offer the action that follows from it."
     },
     {
       "id": "UXF-SILEN-64E4",
@@ -528,7 +528,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/app/checkout/address/page.tsx:88"
       ],
-      "fix": "`catch` bloğunda kullanıcıya görünür bir sonuç üret. Log yeterli değil — logu kullanıcı okumuyor."
+      "fix": "Produce a visible result in the catch block. A log is not enough — the user does not read your logs."
     },
     {
       "id": "UXF-FORCE-7DE0",
@@ -541,7 +541,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/app/signup/page.tsx:12"
       ],
-      "fix": "Misafir olarak devam etme yolu aç. Hesap oluşturmayı işlem *sonrasına* taşı ve alanları o an elindeki verilerle doldur."
+      "fix": "Offer a guest path. Move account creation to *after* the action and pre-fill it with what you already collected."
     },
     {
       "id": "UXF-DEEP-2678",
@@ -552,7 +552,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "node": "",
       "label": "Guest checkout",
       "evidence": [],
-      "fix": "Adımları birleştirmeyi dene: aynı ekranda toplanabilecek alanlar, sonraya ertelenebilecek kararlar, atlanabilecek onaylar."
+      "fix": "Look for steps to merge: fields that could share a screen, decisions that could be deferred, confirmations that could be dropped."
     },
     {
       "id": "UXF-BLOCK-A675",
@@ -565,7 +565,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/components/PromoModal.tsx:20"
       ],
-      "fix": "Kapatma yolu ekle (Escape, dışına tıklama, kapat butonu). Kritik akışın üzerinde gösterme — işlem sonrasına taşı."
+      "fix": "Add a way out — Escape, click-outside, a close button. Better still, do not show it over a critical flow; move it to after the task."
     },
     {
       "id": "UXF-UNSKI-2022",
@@ -578,7 +578,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/components/PromoModal.tsx:20"
       ],
-      "fix": "«Atla» ekle ya da yalnızca ilk kullanımda göster."
+      "fix": "Add a skip action, or show it only on first run."
     },
     {
       "id": "UXF-LONGF-CB43",
@@ -591,7 +591,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/app/signup/page.tsx:12"
       ],
-      "fix": "Gerçekten zorunlu olanları ayır. Kalanları sonraya ertele ya da opsiyonel yap. Bilinen verileri (konum, ülke, önceki sipariş) önceden doldur."
+      "fix": "Separate what is genuinely required. Defer or make optional the rest, and pre-fill anything you can infer — location, country, last order."
     },
     {
       "id": "UXF-DUPLI-BF5E",
@@ -604,7 +604,7 @@ Bu rapor `checkout.flow.json` dosyasından üretildi; o dosya da kod tabanı oku
       "evidence": [
         "src/app/checkout/address/page.tsx:30"
       ],
-      "fix": "Önceki adımdan taşı ve alanı önceden doldur; düzenlenebilir bırak."
+      "fix": "Carry it over from the earlier step and pre-fill the field, leaving it editable."
     }
   ],
   "suppressed": []

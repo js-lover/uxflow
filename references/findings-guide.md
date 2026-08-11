@@ -17,20 +17,20 @@ rather than the findings list.
 ## Anatomy
 
 ```
-### UXF-NOERR-0A7D · Hata kullanıcıya gösterilmiyor
-**Önem:** yüksek · **Güven:** kesin · **Efor:** S (~1 saat)
+### 🔴 The error is never shown to the user
+`UXF-NOERR-0A7D` · **severity:** high · **confidence:** certain · **effort:** S (~1 hour)
 
-**Ne oluyor**       what the code does — mechanical, verifiable
-**Kullanıcı ne yaşıyor**  the human consequence — concrete, not abstract
-**Ne yapmalı**      the change to make
-**Kanıt**           file:line anchors
+**What happens**              what the code does — mechanical, verifiable
+**What the user experiences** the human consequence — concrete, not abstract
+**What to do**                the change to make
+**Evidence**                  file:line anchors
 ```
 
-- **Önem (severity)** — `high` means a user can get stuck or be left uninformed.
+- **Severity** — `high` means a user can get stuck or be left uninformed.
   `medium` costs conversion. `low` is polish.
-- **Güven (confidence)** — `kesin` means the graph proves it. `güçlü ihtimal` means the
+- **Confidence** — `certain` means the graph proves it. `likely` means the
   signal is strong but worth a glance at the code before acting.
-- **Efor** — S under an hour, M about half a day, L needs a design decision.
+- **Effort** — S under an hour, M about half a day, L needs a design decision.
 - **Id** — stable across runs for the same rule and node, so it can be suppressed and
   referenced in a ticket.
 
@@ -60,8 +60,8 @@ it, there is a door, so the user is not trapped no matter how the cycle looks.
 | `waiting_no_resend` | A state that waits on an out-of-band message (mail, SMS, OTP, link) has no edge back to whatever sent it | If the message never arrives, the user is locked out. |
 | `decision_single_branch` | A `decision` has fewer than two forward edges | The else branch is missing from the code or from the model. |
 
-`waiting_no_resend` has two guards. The state must follow a network call — "Bağlantı
-kopyalandı" mentions a link but nothing was sent, so there is nothing to resend. And the
+`waiting_no_resend` has two guards. The state must follow a network call — "Link copied"
+mentions a link but nothing was sent, so there is nothing to resend. And the
 resend must be an edge back to the *producer*: an edge that merely continues the journey,
 like the emailed link finally being opened, is not a resend, because it depends on the
 very thing that did not arrive.
@@ -81,7 +81,7 @@ evidence. Severe ones (`no_error_state`, `silent_failure`, `destructive_no_confi
 `references/ir-authoring.md` for the evidence each tag requires.
 
 `external_handoff` is **not** a finding. Leaving the app for OAuth is normal behaviour;
-listing it as a problem buries the real ones. It appears under "Bilgi notları" instead.
+listing it as a problem buries the real ones. It appears under "Notes" instead.
 
 ### Model quality
 
@@ -96,10 +96,10 @@ Bare numbers do not help anyone decide anything, so each one carries a verdict:
 
 | Metric | Meaning |
 | --- | --- |
-| **Ana yol adım sayısı** | Nodes the user passes through, excluding `start`/`end` — they are bookkeeping, not steps |
-| **Başarısızlıkla biten yol sayısı** | How many distinct ways a user can end up stuck short of the goal. The single best indicator of flow health. |
-| **Hata dalı kapsamı** | Share of network calls that have a modelled failure branch |
-| **Kaynak çapası kapsamı** | Share of nodes traceable to `file:line`. Below 100% means read the map with care. |
+| **Steps on the primary path** | Nodes the user passes through, excluding `start`/`end` — they are bookkeeping, not steps |
+| **Ways to end up stuck** | How many distinct ways a user can end up stuck short of the goal. The single best indicator of flow health. |
+| **Error-branch coverage** | Share of network calls that have a modelled failure branch |
+| **Source-anchor coverage** | Share of nodes traceable to `file:line`. Below 100% means read the map with care. |
 
 The primary path is computed exactly: cycle-closing edges are removed to obtain a DAG,
 then a dynamic program over topological order picks the highest-scoring path (reaching
@@ -109,11 +109,11 @@ so a wide fan-out cannot hide a deeper branch.
 ## Suppression
 
 ```bash
-python3 scripts/flowlint.py ignore UXF-NOERR-0A7D --reason "Q3'te ele alınacak"
+python3 scripts/flowlint.py ignore UXF-NOERR-0A7D --reason "scheduled for Q3"
 ```
 
 Writes to `.flowlintignore` (walked up from the output directory, like `.gitignore`).
-Suppressed findings move to an "accepted" section — they stop failing CI but stay
+Suppressed findings move to an "Accepted" section — they stop failing CI but stay
 visible, with the reason recorded. Without this, `--fail-on-high` is unadoptable on an
 existing codebase, and a check nobody can turn on is a check nobody runs.
 
@@ -121,7 +121,7 @@ existing codebase, and a check nobody can turn on is a check nobody runs.
 
 - Lead with the **headline** and the **priority list**. Most people read nothing else.
 - Give the file:line for anything high severity — it is what turns a report into work.
-- Be honest about `güçlü ihtimal` findings: say the signal is strong and the code is
+- Be honest about `likely` findings: say the signal is strong and the code is
   worth a look, rather than asserting a defect.
 - If the audit found nothing, say so plainly. A clean flow is a real result, not a
   failure to try hard enough — do not manufacture findings to fill the page.

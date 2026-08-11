@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "flowlint"
-version = "1.3.1"
+version = "1.4.0"
 description = "Lint your app's real user flows. Reads the codebase, maps every screen and branch, and reports the dead ends, unhandled errors and friction the code actually contains."
 readme = "README.md"
 license = { file = "LICENSE" }

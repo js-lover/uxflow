@@ -11,7 +11,7 @@ they are here to prompt a conversation, not to end one.
 GOOD, WARN, BAD, INFO = "good", "warn", "bad", "info"
 
 ICON = {GOOD: "✓", WARN: "!", BAD: "✗", INFO: "·"}
-VERDICT_TR = {GOOD: "iyi", WARN: "dikkat", BAD: "sorunlu", INFO: "bilgi"}
+VERDICT_LABEL = {GOOD: "good", WARN: "watch", BAD: "problem", INFO: "info"}
 
 
 def _band(value, good_max, warn_max):
@@ -24,80 +24,80 @@ def _band(value, good_max, warn_max):
 
 RULES = {
     "primary_path_steps": {
-        "label": "Ana yol adım sayısı",
+        "label": "Steps on the primary path",
         "band": lambda v: _band(v, 6, 9),
         "note": {
-            GOOD: "makul uzunlukta",
-            WARN: "6 adımın üzerinde — her ek adım terk oranını artırır",
-            BAD:  "9 adımın üzerinde — akışı bölmeyi ya da adım birleştirmeyi düşün",
+            GOOD: "a reasonable length",
+            WARN: "above six — every extra step costs users",
+            BAD:  "above nine — consider splitting the flow or merging steps",
         },
     },
     "screens_on_primary_path": {
-        "label": "Ana yoldaki ekran sayısı",
+        "label": "Screens on the primary path",
         "band": lambda v: _band(v, 4, 6),
         "note": {
-            GOOD: "makul",
-            WARN: "ekran sayısı artıyor — birleştirilebilir mi?",
-            BAD:  "çok fazla ekran geçişi",
+            GOOD: "reasonable",
+            WARN: "creeping up — could any of these be combined?",
+            BAD:  "too many screen transitions",
         },
     },
     "taps_on_primary_path": {
-        "label": "Ana yoldaki etkileşim",
+        "label": "Interactions on the primary path",
         "band": lambda v: _band(v, 8, 14),
         "note": {
-            GOOD: "düşük etkileşim yükü",
-            WARN: "etkileşim yükü artıyor",
-            BAD:  "kullanıcı çok fazla dokunuş yapıyor",
+            GOOD: "light interaction load",
+            WARN: "interaction load is climbing",
+            BAD:  "the user is doing a lot of tapping",
         },
     },
     "required_fields": {
-        "label": "Zorunlu form alanı (toplam)",
+        "label": "Required form fields (total)",
         "band": lambda v: _band(v, 6, 12),
         "note": {
-            GOOD: "az sayıda zorunlu alan",
-            WARN: "her zorunlu alan bir vazgeçme fırsatı — hepsi gerçekten zorunlu mu?",
-            BAD:  "form yükü yüksek; alanları böl ya da ertele",
+            GOOD: "few required fields",
+            WARN: "every required field is a chance to give up — are they all needed?",
+            BAD:  "heavy form load; split the fields or defer them",
         },
     },
     "failure_exits": {
-        "label": "Başarısızlıkla biten yol sayısı",
+        "label": "Ways to end up stuck",
         "band": lambda v: _band(v, 0, 2),
         "note": {
-            GOOD: "kullanıcının kilitlendiği yol yok",
-            WARN: "kullanıcının hedefe ulaşamadan takıldığı yollar var",
-            BAD:  "çok sayıda çıkmaz — akışın güvenilirliği düşük",
+            GOOD: "no point where the user gets trapped",
+            WARN: "there are places a user stalls short of the goal",
+            BAD:  "many dead ends — this flow is not dependable",
         },
     },
     "error_branch_coverage": {
-        "label": "Hata dalı kapsamı",
+        "label": "Error-branch coverage",
         "band": lambda v: BAD if v < 50 else (WARN if v < 100 else GOOD),
         "unit": "%",
         "note": {
-            GOOD: "ağ çağrılarının tamamının hata dalı modellenmiş",
-            WARN: "bazı ağ çağrılarının başarısızlık yolu yok",
-            BAD:  "ağ çağrılarının çoğunda hata dalı yok",
+            GOOD: "every network call has a modelled failure path",
+            WARN: "some network calls have no failure path",
+            BAD:  "most network calls have no failure path",
         },
     },
     "source_coverage": {
-        "label": "Kaynak çapası kapsamı",
+        "label": "Source-anchor coverage",
         "band": lambda v: BAD if v < 80 else (WARN if v < 100 else GOOD),
         "unit": "%",
         "note": {
-            GOOD: "her düğüm koda kadar izlenebiliyor",
-            WARN: "bazı düğümler doğrulanamıyor",
-            BAD:  "düğümlerin önemli bir kısmı koda dayanmıyor — haritaya temkinli yaklaş",
+            GOOD: "every node traces back to a line of code",
+            WARN: "some nodes cannot be verified",
+            BAD:  "a large share of nodes is not grounded in code — read this map with care",
         },
     },
 }
 
 # Reported without a verdict: descriptive, not judgeable out of context.
 PLAIN = {
-    "screens": "Ekran",
-    "api_calls": "Ağ çağrısı",
-    "decisions": "Karar noktası",
-    "error_branches": "Modellenen hata dalı",
-    "nodes": "Düğüm",
-    "edges": "Geçiş",
+    "screens": "Screens",
+    "api_calls": "Network calls",
+    "decisions": "Decision points",
+    "error_branches": "Modelled error branches",
+    "nodes": "Nodes",
+    "edges": "Transitions",
 }
 
 
@@ -129,19 +129,20 @@ def headline(metrics, findings):
     fails = metrics.get("failure_exits", 0)
 
     if not findings:
-        return ("Bu akışta yapısal bir sorun bulunamadı. Ana yol %d adım ve "
-                "kullanıcının kilitlendiği bir nokta yok." % steps)
+        return ("No structural problems found in this flow. The primary path is %d "
+                "steps and there is nowhere a user gets stuck." % steps)
 
     parts = []
     if high:
-        parts.append("%d tanesi kullanıcıyı doğrudan etkileyen" % len(high))
+        parts.append("%d that affect users directly" % len(high))
     if med:
-        parts.append("%d tanesi orta öncelikli" % len(med))
-    detay = ", ".join(parts) if parts else "hepsi düşük öncelikli"
+        parts.append("%d of medium priority" % len(med))
+    detail = ", ".join(parts) if parts else "all of them low priority"
 
-    cumle = "Bu akışta %d bulgu var; %s." % (len(findings), detay)
+    sentence = "This flow has %d finding%s: %s." % (
+        len(findings), "" if len(findings) == 1 else "s", detail)
     if fails:
-        cumle += (" Kullanıcının hedefe ulaşamadan takıldığı %d farklı yol tespit edildi."
-                  % fails)
-    cumle += " Ana yol %d adım." % steps
-    return cumle
+        sentence += (" There %s %d distinct way%s to end up stuck short of the goal."
+                     % ("is" if fails == 1 else "are", fails, "" if fails == 1 else "s"))
+    sentence += " The primary path is %d steps." % steps
+    return sentence

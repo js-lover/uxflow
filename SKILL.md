@@ -62,7 +62,7 @@ Three files per flow, no more:
 
 ```
 auth-login.flow.json   the IR you edit
-auth-login.drawio      multi-page: [Akış] [Akış + notlar] (+ [Değişim] after a diff)
+auth-login.drawio      multi-page: [Flow] [Flow + notes] (+ [Changes] after a diff)
 auth-login.md          the report, with the diagram embedded as Mermaid
 ```
 
@@ -195,7 +195,7 @@ experiences, what to change, and the evidence.
 Each finding has a stable id (`UXF-NOERR-0A7D`). If the team accepts one:
 
 ```bash
-flowlint ignore UXF-NOERR-0A7D --reason "3. çeyrekte ele alınacak"
+flowlint ignore UXF-NOERR-0A7D --reason "scheduled for Q3"
 ```
 
 It moves to an "accepted" section of the report and stops failing CI, but stays visible.
@@ -215,7 +215,7 @@ flowlint diff docs/ux-flows/checkout.flow.json \
                                       -o docs/ux-flows
 ```
 
-Adds a **Değişim** page to the `.drawio` and a metric-delta table to the report.
+Adds a **Changes** page to the `.drawio` and a metric-delta table to the report.
 **Keep node ids identical for anything that survives the redesign** — that is how the
 diff knows a screen was *changed* rather than *replaced*.
 

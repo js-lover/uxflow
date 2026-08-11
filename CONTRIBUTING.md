@@ -98,9 +98,12 @@ Rules live in `analyze.py` and their prose lives in `catalog.py`. Two things to 
 ## Writing findings text
 
 Write for someone who has not opened the code. `what` is mechanical and verifiable. `impact`
-describes a person's experience, concretely — "kullanıcı boş bir ekranda kalır ve aynı butona
-tekrar basar", not "kötü kullanıcı deneyimi". `fix` names the change, and mentions the
+describes a person's experience, concretely — "the user is left on a blank screen and taps
+the same button again", not "poor user experience". `fix` names the change, and mentions the
 framework idiom when there is an obvious one.
+
+Findings text is **English**. It is what a stranger reads first, so it is part of the public
+interface of the project, not a place for the maintainer's own language.
 
 ## Changing the layout
 
