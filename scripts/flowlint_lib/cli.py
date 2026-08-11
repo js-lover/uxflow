@@ -1,19 +1,23 @@
-"""uxflow command line interface.
+"""flowlint -- a linter for your app's user flows.
 
-uxflow -- deterministic UX flow diagram generator and static UX audit.
+Reads a flow description extracted from the codebase, reports what is wrong with
+it, and renders editable diagrams as the evidence.
 
-Usage
-  uxflow.py validate <flow.json>...
-  uxflow.py render   <flow.json>... [-o DIR] [--formats drawio,md,svg,mermaid]
-                                    [--fail-on-high]
-  uxflow.py audit    <flow.json>... [-o DIR] [--fail-on-high]
-  uxflow.py diff     <before.json> <after.json> [-o DIR]
-  uxflow.py check    <flow.json>... [-o DIR]
-  uxflow.py ignore   <FINDING-ID>... [--reason TEXT]
-  uxflow.py init     <flow-id> [-o DIR]
-  uxflow.py id       <route> [component]
+Commands
+  flowlint check    <flow.json>... [-o DIR] [--fail-on-high] [--format full]
+                    lint the flows -- the point of the tool
+  flowlint render   <flow.json>... [-o DIR] [--formats drawio,md,svg,mermaid]
+                    write the diagram and the full report
+  flowlint diff     <before.json> <after.json> [-o DIR]
+                    before/after comparison with a metric delta
+  flowlint stale    <flow.json>... [-o DIR]
+                    CI guard: fail if an IR changed but diagrams were not regenerated
+  flowlint validate <flow.json>...            schema and integrity check
+  flowlint ignore   <FINDING-ID>... [--reason TEXT]   accept a finding
+  flowlint init     <flow-id> [-o DIR]        scaffold an IR file
+  flowlint id       <route> [component]       mint a stable node id
 
-Default output per flow (3 files):
+Default output per flow (3 files)
   <id>.flow.json   the IR you edit
   <id>.drawio      multi-page: [Akış] [Akış + notlar] (+ [Değişim] after a diff)
   <id>.md          the report, with the diagram embedded as Mermaid
@@ -29,8 +33,8 @@ import sys
 
 from . import analyze, diffing, drawio, ir, layout, mermaid, report, svg
 
-LOCK = ".uxflow.lock.json"
-IGNORE = ".uxflowignore"
+LOCK = ".flowlint.lock.json"
+IGNORE = ".flowlintignore"
 ALL_FORMATS = ["drawio", "md", "svg", "mermaid"]
 DEFAULT_FORMATS = "drawio,md"
 
@@ -86,7 +90,7 @@ def _write_lock(outdir, data):
 
 # ------------------------------------------------------------------ suppression
 def _ignore_file(start="."):
-    """Walk up from `start` looking for .uxflowignore, like .gitignore."""
+    """Walk up from `start` looking for .flowlintignore, like .gitignore."""
     cur = os.path.abspath(start)
     while True:
         cand = os.path.join(cur, IGNORE)
@@ -121,7 +125,7 @@ def cmd_ignore(args):
     fresh = not os.path.exists(path)
     with open(path, "a", encoding="utf-8") as fh:
         if fresh:
-            fh.write("# uxflow -- kabul edilmiş bulgular.\n"
+            fh.write("# flowlint -- kabul edilmiş bulgular.\n"
                      "# Her satır bir bulgu id'si. Gerekçeyi yanına yaz; rapora yansır.\n\n")
         for i in new:
             fh.write("%s%s\n" % (i, ("  # " + args.reason) if args.reason else ""))
@@ -185,7 +189,7 @@ def cmd_render(args):
               % (len(rep["findings"]), len(highs),
                  rep["metrics"]["primary_path_steps"], rep["metrics"]["failure_exits"]))
         if rep["suppressed"]:
-            print("  → %d bulgu bastırılmış (.uxflowignore)" % len(rep["suppressed"]))
+            print("  → %d bulgu bastırılmış (.flowlintignore)" % len(rep["suppressed"]))
         if args.fail_on_high and highs:
             exit_code = 1
 
@@ -195,20 +199,48 @@ def cmd_render(args):
     return exit_code
 
 
-def cmd_audit(args):
+def cmd_check(args):
+    """Lint the flows. The headline command -- what the tool is named after.
+
+    Prints a compact result line per flow by default, because that is what a CI
+    log should contain. `-o DIR` writes the full report instead.
+    """
     outdir = args.out
     suppressed = _read_ignore(outdir or ".")
     worst = 0
+    total = 0
     for path, doc in _load(args.flows):
         rep = analyze.audit(doc, suppressed=suppressed)
-        md = report.render(doc, rep, embed_diagram=False)
+        findings = rep["findings"]
+        highs = [f for f in findings if f["severity"] == "high"]
+        total += len(findings)
+
         if outdir:
-            _write(os.path.join(_ensure(outdir), doc["id"] + ".md"), md)
+            _write(os.path.join(_ensure(outdir), doc["id"] + ".md"),
+                   report.render(doc, rep, embed_diagram=False))
+        elif args.format == "full":
+            print(report.render(doc, rep, embed_diagram=False))
         else:
-            print(md)
-        if any(f["severity"] == "high" for f in rep["findings"]):
+            mark = "✗" if highs else ("!" if findings else "✓")
+            print("%s %-24s %d bulgu (%d yüksek) · ana yol %d adım · %d çıkmaz"
+                  % (mark, doc["id"], len(findings), len(highs),
+                     rep["metrics"]["primary_path_steps"], rep["metrics"]["failure_exits"]))
+            for f in findings:
+                where = f["evidence"][0] if f["evidence"] else (f["label"] or doc["id"])
+                print("    %s  %s — %s  [%s]"
+                      % (SEVERITY_MARK[f["severity"]], f["title"],
+                         f["label"] or "akış geneli", where))
+            if rep["suppressed"]:
+                print("    %d bulgu kabul edilmiş (.flowlintignore)" % len(rep["suppressed"]))
+
+        if highs:
             worst = 1
+    if not args.out and args.format != "full" and total == 0:
+        print("Sorun yok.")
     return worst if args.fail_on_high else 0
+
+
+SEVERITY_MARK = {"high": "yüksek", "medium": "orta  ", "low": "düşük "}
 
 
 def cmd_diff(args):
@@ -234,7 +266,8 @@ def cmd_diff(args):
     return 0
 
 
-def cmd_check(args):
+def cmd_stale(args):
+    """CI guard: did someone edit an IR without regenerating the diagrams?"""
     outdir = args.out or "docs/ux-flows"
     lock = _read_lock(outdir)
     stale, legacy = [], []
@@ -249,10 +282,10 @@ def cmd_check(args):
     if legacy:
         print("Bu akışlar için kayıt yok (ilk çalıştırma ya da eski sürümden geçiş): %s"
               % ", ".join(legacy), file=sys.stderr)
-        print("`uxflow render` çalıştırıp sonucu commit et.", file=sys.stderr)
+        print("`flowlint render` çalıştırıp sonucu commit et.", file=sys.stderr)
         return 1
     if stale:
-        print("Diyagramlar güncel değil. `uxflow render` çalıştırıp commit et:", file=sys.stderr)
+        print("Diyagramlar güncel değil. `flowlint render` çalıştırıp commit et:", file=sys.stderr)
         for fid, rec, cur in stale:
             print("  %-24s kayıtlı=%s güncel=%s" % (fid, rec, cur), file=sys.stderr)
         return 1
@@ -306,7 +339,7 @@ def cmd_id(args):
 
 # ------------------------------------------------------------------------ main
 def build_parser():
-    p = argparse.ArgumentParser(prog="uxflow", description=__doc__,
+    p = argparse.ArgumentParser(prog="flowlint", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -324,11 +357,18 @@ def build_parser():
     r.add_argument("--variant", help=argparse.SUPPRESS)
     r.set_defaults(func=cmd_render)
 
-    a = sub.add_parser("audit", help="yalnızca rapor")
-    a.add_argument("flows", nargs="+")
-    a.add_argument("-o", "--out")
-    a.add_argument("--fail-on-high", action="store_true")
-    a.set_defaults(func=cmd_audit)
+    # `check` is the headline command: the tool is a linter, so linting is what
+    # its plainest verb has to do. The staleness guard moved to `stale`.
+    for name, hidden in (("check", False), ("audit", True)):
+        a = sub.add_parser(name, help=argparse.SUPPRESS if hidden
+                           else "akışları denetle (asıl komut)")
+        a.add_argument("flows", nargs="+")
+        a.add_argument("-o", "--out", help="raporu buraya yaz (varsayılan: özet bas)")
+        a.add_argument("--format", choices=["summary", "full"], default="summary",
+                       help="summary = CI için kısa liste, full = tam rapor")
+        a.add_argument("--fail-on-high", action="store_true",
+                       help="yüksek önemli bulgu varsa 1 ile çık")
+        a.set_defaults(func=cmd_check)
 
     d = sub.add_parser("diff", help="öncesi/sonrası karşılaştırma")
     d.add_argument("before")
@@ -336,10 +376,10 @@ def build_parser():
     d.add_argument("-o", "--out")
     d.set_defaults(func=cmd_diff)
 
-    c = sub.add_parser("check", help="CI: diyagramlar IR ile senkron mu")
-    c.add_argument("flows", nargs="+")
-    c.add_argument("-o", "--out")
-    c.set_defaults(func=cmd_check)
+    s = sub.add_parser("stale", help="CI: diyagramlar IR ile senkron mu")
+    s.add_argument("flows", nargs="+")
+    s.add_argument("-o", "--out")
+    s.set_defaults(func=cmd_stale)
 
     g = sub.add_parser("ignore", help="bulguyu kabul et ve sustur")
     g.add_argument("ids", nargs="+", metavar="FINDING-ID")

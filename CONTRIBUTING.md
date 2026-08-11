@@ -1,11 +1,11 @@
-# Contributing to uxflow
+# Contributing to flowlint
 
 Thanks for helping out. This project has two hard rules and a short setup.
 
 ## The two rules
 
 1. **Zero runtime dependencies.** Python 3.8+ standard library only. If a change needs a
-   package, it belongs in a separate optional tool, not in `scripts/uxflow_lib/`.
+   package, it belongs in a separate optional tool, not in `scripts/flowlint_lib/`.
 2. **Rendering is deterministic.** The same IR must always produce byte-identical output.
    Never introduce randomness, wall-clock timestamps, set iteration order, or anything derived
    from the filesystem into the layout or the renderers. There is a test for this; keep it green.
@@ -15,39 +15,39 @@ Thanks for helping out. This project has two hard rules and a short setup.
 There is no build step and nothing to install.
 
 ```bash
-git clone https://github.com/<you>/uxflow.git
-cd uxflow
+git clone https://github.com/<you>/flowlint.git
+cd flowlint
 python3 -m unittest discover -s tests -v
 ```
 
 ### Two entry points, one codebase
 
-`scripts/uxflow_lib/` is the package. It ships to PyPI under the import name `uxflow`,
+`scripts/flowlint_lib/` is the package. It ships to PyPI under the import name `flowlint`,
 and it is also runnable straight from a checkout:
 
 ```bash
-uxflow render ...                          # installed console script -> uxflow.cli:main
-python3 scripts/uxflow.py render ...       # vendored, nothing installed
+flowlint render ...                          # installed console script -> flowlint.cli:main
+python3 scripts/flowlint.py render ...       # vendored, nothing installed
 ```
 
 Both must keep working, which imposes two rules:
 
 - **modules inside the package use relative imports** (`from . import ir`). An absolute
-  `import uxflow_lib` breaks the moment the package is installed under another name.
-- **`scripts/uxflow.py` stays a shim.** Logic there would only run for vendored users.
+  `import flowlint_lib` breaks the moment the package is installed under another name.
+- **`scripts/flowlint.py` stays a shim.** Logic there would only run for vendored users.
 
 There is a test for each of these.
 
 When you bump the version, change it in `pyproject.toml` *and*
-`scripts/uxflow_lib/__init__.py` — a test compares them, and the release workflow
+`scripts/flowlint_lib/__init__.py` — a test compares them, and the release workflow
 refuses to publish when the tag disagrees.
 
 ## Before you open a PR
 
 ```bash
 python3 -m unittest discover -s tests            # all tests pass
-python3 scripts/uxflow.py validate examples/*.flow.json
-python3 scripts/uxflow.py render   examples/*.flow.json -o examples/output
+python3 scripts/flowlint.py validate examples/*.flow.json
+python3 scripts/flowlint.py render   examples/*.flow.json -o examples/output
 git diff --stat examples/output                  # should be empty unless you meant to change output
 ```
 
@@ -81,7 +81,7 @@ guess is worse than no playbook.
 4. `references/ir-authoring.md` — the "evidence you must have found" row. **Required.** A tag
    with no stated evidence rule will get applied loosely and devalue the whole audit.
 5. `references/findings-guide.md` — a row in the rules table.
-6. A test in `tests/test_uxflow.py`.
+6. A test in `tests/test_flowlint.py`.
 
 If the tag describes normal behaviour rather than a defect (like `external_handoff`), add it
 to `catalog.INFORMATIONAL` instead. Listing non-problems as findings buries the real ones.
@@ -104,7 +104,7 @@ framework idiom when there is an obvious one.
 
 ## Changing the layout
 
-`scripts/uxflow_lib/layout.py` is a layered (Sugiyama-style) pipeline: break cycles → layer →
+`scripts/flowlint_lib/layout.py` is a layered (Sugiyama-style) pipeline: break cycles → layer →
 barycenter ordering → coordinates. If you improve crossing reduction or spacing:
 
 - keep it deterministic and bounded (the barycenter sweep count is fixed on purpose)

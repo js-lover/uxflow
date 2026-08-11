@@ -143,7 +143,7 @@ Hata durumunu arayüze bağla. Yönlendirmeyle taşınan hatalarda (`?error=...`
 
 **Kanıt:** `app/auth/callback/route.ts:17` · `app/login/page.tsx:8` · `app/login/page.tsx:104`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-NOERR-0A7D`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-NOERR-0A7D`</sub>
 
 <a id="uxf-resend-a1ad"></a>
 
@@ -165,7 +165,7 @@ E-posta spam'e düştüyse ya da SMS gelmediyse kullanıcı tamamen kilitlenir. 
 
 **Kanıt:** `app/login/page.tsx:68`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-RESEND-A1AD`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-RESEND-A1AD`</sub>
 
 <a id="uxf-ext-e61b"></a>
 
@@ -187,7 +187,7 @@ Sağlayıcının iptal/hata dönüş parametresini oku (`error`, `error_descript
 
 **Kanıt:** `app/login/page.tsx:20`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-EXT-E61B`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-EXT-E61B`</sub>
 
 <a id="uxf-deep-2678"></a>
 
@@ -207,7 +207,7 @@ Her ek adım kullanıcı kaybı üretir. Uzun akışlar özellikle mobilde ve il
 
 Adımları birleştirmeyi dene: aynı ekranda toplanabilecek alanlar, sonraya ertelenebilecek kararlar, atlanabilecek onaylar.
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-DEEP-2678`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-DEEP-2678`</sub>
 
 ## Bilgi notları
 

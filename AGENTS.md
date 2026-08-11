@@ -1,4 +1,4 @@
-# uxflow — instructions for coding agents
+# flowlint — instructions for coding agents
 
 > This file is the agent-agnostic entry point. Cursor, Codex, Copilot, Gemini, Cline, Aider and
 > any other agent that reads `AGENTS.md` should follow it. Claude Code / Claude Cowork users get
@@ -19,7 +19,7 @@ surface the second flow, especially its unlit branches.
 You write **JSON**, not diagrams.
 
 ```
-you (agent)                       scripts/uxflow.py (deterministic)
+you (agent)                       scripts/flowlint.py (deterministic)
 ────────────                      ─────────────────────────────────
 read the code   ──►  flow.json  ──►  <id>.drawio   <id>.md
 ```
@@ -61,8 +61,8 @@ version-controllable.
 6. **Validate, then render:**
 
    ```bash
-   python3 scripts/uxflow.py validate docs/ux-flows/*.flow.json
-   python3 scripts/uxflow.py render   docs/ux-flows/*.flow.json -o docs/ux-flows
+   python3 scripts/flowlint.py validate docs/ux-flows/*.flow.json
+   python3 scripts/flowlint.py render   docs/ux-flows/*.flow.json -o docs/ux-flows
    ```
 
 7. **Report** the findings with their file:line anchors, and offer a `-proposed` flow plus a
@@ -71,22 +71,22 @@ version-controllable.
 ## CLI reference
 
 ```
-uxflow.py validate <flow.json>...                       schema + integrity check
-uxflow.py render   <flow.json>... [-o DIR]              .drawio + report
+flowlint.py validate <flow.json>...                       schema + integrity check
+flowlint.py render   <flow.json>... [-o DIR]              .drawio + report
                    [--formats drawio,md,svg,mermaid]    default: drawio,md
                    [--fail-on-high]
-uxflow.py audit    <flow.json>... [-o DIR]              report only
-uxflow.py diff     <before.json> <after.json> [-o DIR]  before/after + metric delta
-uxflow.py check    <flow.json>... [-o DIR]              CI: fail if diagrams are stale
-uxflow.py ignore   <FINDING-ID>... [--reason TEXT]      accept a finding, keep it visible
-uxflow.py init     <flow-id> [-o DIR]                   scaffold an IR file
-uxflow.py id       <route> [component]                  mint a stable node id
+flowlint.py check    <flow.json>... [-o DIR]              report only
+flowlint.py diff     <before.json> <after.json> [-o DIR]  before/after + metric delta
+flowlint.py check    <flow.json>... [-o DIR]              CI: fail if diagrams are stale
+flowlint.py ignore   <FINDING-ID>... [--reason TEXT]      accept a finding, keep it visible
+flowlint.py init     <flow-id> [-o DIR]                   scaffold an IR file
+flowlint.py id       <route> [component]                  mint a stable node id
 ```
 
 Requires Python 3.8+. No third-party packages, no network access, no build step.
 
-If `uxflow` is on PATH (`pip install uxflow`), use it directly; otherwise call the
-vendored shim, `python3 uxflow/scripts/uxflow.py`. Same code either way.
+If `flowlint` is on PATH (`pip install flowlint`), use it directly; otherwise call the
+vendored shim, `python3 flowlint/scripts/flowlint.py`. Same code either way.
 
 ## If you are a human
 

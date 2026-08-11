@@ -1,4 +1,4 @@
-"""Load, validate and normalise the UXFlow IR. Standard library only."""
+"""Load, validate and normalise the flowlint IR. Standard library only."""
 
 import hashlib
 import json
@@ -207,7 +207,7 @@ def topo_order(dag):
 
 # ------------------------------------------------------------------------ hashing
 def content_hash(doc):
-    """Stable hash over the semantic content only -- used by `uxflow check`."""
+    """Stable hash over the semantic content only -- used by `flowlint check`."""
     clean = strip_internal(doc)
     payload = {
         "id": clean.get("id"),

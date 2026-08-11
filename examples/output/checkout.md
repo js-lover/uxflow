@@ -150,7 +150,7 @@ Reddedilme durumunu yakala ve kullanıcıya göster: hata mesajı + yeniden dene
 
 **Kanıt:** `src/app/api/orders/route.ts:11`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-NOERR-F6BC`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-NOERR-F6BC`</sub>
 
 <a id="uxf-dead-6370"></a>
 
@@ -172,7 +172,7 @@ Bu ekrandan ileri giden en az bir yol ekle: tamamlama, yeniden dene, ya da güve
 
 **Kanıt:** `src/app/checkout/declined/page.tsx:9`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-DEAD-6370`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-DEAD-6370`</sub>
 
 <a id="uxf-nobac-cad8"></a>
 
@@ -194,7 +194,7 @@ Geri/iptal imkânı ekle. Yığını kasıtlı temizliyorsan (ödeme sonrası gi
 
 **Kanıt:** `src/app/checkout/declined/page.tsx:9`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-NOBAC-CAD8`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-NOBAC-CAD8`</sub>
 
 <a id="uxf-nobac-279b"></a>
 
@@ -216,7 +216,7 @@ Geri/iptal imkânı ekle. Yığını kasıtlı temizliyorsan (ödeme sonrası gi
 
 **Kanıt:** `src/app/checkout/payment/page.tsx:24`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-NOBAC-279B`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-NOBAC-279B`</sub>
 
 <a id="uxf-dead-7409"></a>
 
@@ -238,7 +238,7 @@ Bu ekrandan ileri giden en az bir yol ekle: tamamlama, yeniden dene, ya da güve
 
 **Kanıt:** `src/app/checkout/address/page.tsx:88`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-DEAD-7409`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-DEAD-7409`</sub>
 
 <a id="uxf-silen-64e4"></a>
 
@@ -260,7 +260,7 @@ Kullanıcı işlemin başarısız olduğunu asla öğrenmiyor. Daha kötüsü: b
 
 **Kanıt:** `src/app/checkout/address/page.tsx:88`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SILEN-64E4`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-SILEN-64E4`</sub>
 
 <a id="uxf-force-7de0"></a>
 
@@ -282,7 +282,7 @@ Misafir olarak devam etme yolu aç. Hesap oluşturmayı işlem *sonrasına* taş
 
 **Kanıt:** `src/app/signup/page.tsx:12`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-FORCE-7DE0`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-FORCE-7DE0`</sub>
 
 <a id="uxf-deep-2678"></a>
 
@@ -302,7 +302,7 @@ Her ek adım kullanıcı kaybı üretir. Uzun akışlar özellikle mobilde ve il
 
 Adımları birleştirmeyi dene: aynı ekranda toplanabilecek alanlar, sonraya ertelenebilecek kararlar, atlanabilecek onaylar.
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-DEEP-2678`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-DEEP-2678`</sub>
 
 <a id="uxf-block-a675"></a>
 
@@ -324,7 +324,7 @@ Kapatma yolu ekle (Escape, dışına tıklama, kapat butonu). Kritik akışın �
 
 **Kanıt:** `src/components/PromoModal.tsx:20`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-BLOCK-A675`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-BLOCK-A675`</sub>
 
 <a id="uxf-unski-2022"></a>
 
@@ -346,7 +346,7 @@ Ne yapmak istediğini bilen kullanıcı yavaşlatılıyor. Tekrar eden kullanım
 
 **Kanıt:** `src/components/PromoModal.tsx:20`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-UNSKI-2022`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-UNSKI-2022`</sub>
 
 <a id="uxf-longf-cb43"></a>
 
@@ -368,7 +368,7 @@ Gerçekten zorunlu olanları ayır. Kalanları sonraya ertele ya da opsiyonel ya
 
 **Kanıt:** `src/app/signup/page.tsx:12`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-LONGF-CB43`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-LONGF-CB43`</sub>
 
 <a id="uxf-dupli-bf5e"></a>
 
@@ -390,7 +390,7 @@ Kullanıcı «bunu az önce yazmıştım» diye düşünüyor. Uygulamanın kend
 
 **Kanıt:** `src/app/checkout/address/page.tsx:30`
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-DUPLI-BF5E`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-DUPLI-BF5E`</sub>
 
 ## Bilgi notları
 

@@ -224,7 +224,7 @@ def _findings(o, report):
         if f["evidence"]:
             o.append("**Kanıt:** " + " · ".join("`%s`" % e for e in f["evidence"]))
             o.append("")
-        o.append("<sub>Kabul edip susturmak için: `uxflow ignore %s`</sub>" % f["id"])
+        o.append("<sub>Kabul edip susturmak için: `flowlint ignore %s`</sub>" % f["id"])
         o.append("")
 
 
@@ -248,7 +248,7 @@ def _suppressed(o, report):
         return
     o.append("## Kabul edilenler (%d)" % len(muted))
     o.append("")
-    o.append("`.uxflowignore` dosyasında bastırılmış bulgular. Denetimi geçerler ama "
+    o.append("`.flowlintignore` dosyasında bastırılmış bulgular. Denetimi geçerler ama "
              "kaybolmazlar — bilinçli kabul edildikleri kayıt altında.")
     o.append("")
     o.append("| id | bulgu | düğüm |")

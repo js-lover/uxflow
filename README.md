@@ -1,16 +1,25 @@
-# uxflow
+# flowlint
 
-[![CI](https://github.com/js-lover/uxflow/actions/workflows/uxflow.yml/badge.svg)](https://github.com/js-lover/uxflow/actions/workflows/uxflow.yml)
+[![CI](https://github.com/js-lover/flowlint/actions/workflows/flowlint.yml/badge.svg)](https://github.com/js-lover/flowlint/actions/workflows/flowlint.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#)
 
-**Turn an existing app's code into editable UX flow diagrams — and a UX audit you can act on.**
+**A linter for your app's user flows.**
 
-Point an AI agent (or yourself) at a codebase. Get `.drawio` files you can open in
-[diagrams.net](https://app.diagrams.net), Mermaid that renders inline on GitHub, SVG for your
-README, and a findings report that names every dead end and unhandled failure with a
-`file:line` you can jump to.
+Your linter checks syntax. Your type checker checks types. Nothing checks whether a user
+can get *out* of the screen they just landed on.
+
+flowlint reads an existing codebase, maps the flow the code actually implements, and
+reports what is wrong with it: dead ends, network calls with no error branch, OAuth
+screens with no cancel path, forms that ask for what you already know. Every finding
+names a `file:line`. Every diagram is editable in
+[diagrams.net](https://app.diagrams.net) and renders inline on GitHub.
+
+```bash
+pip install flowlint
+flowlint check docs/ux-flows/*.flow.json --fail-on-high
+```
 
 Zero dependencies. Python 3.8+ standard library only. MIT.
 
@@ -23,7 +32,7 @@ implements. The second one is written down nowhere. Error states, empty states, 
 paths, permission denials — these are rarely designed. They get improvised while coding,
 or left out entirely.
 
-uxflow extracts the second flow from the code itself. A real example from the login flow
+flowlint extracts the second flow from the code itself. A real example from the login flow
 of a real app, found in the first run:
 
 > `/auth/callback` redirects to `/login?error=auth` when OAuth fails — but the login page
@@ -38,10 +47,10 @@ it is light on the branches nobody looked at.
 Flow diagrams rot. Someone draws the checkout flow in Figma, ships three changes, and the
 diagram is a lie by Friday. So nobody trusts it, so nobody updates it.
 
-uxflow avoids that by splitting the problem in two:
+flowlint avoids that by splitting the problem in two:
 
 ```
-   you / your agent                    uxflow (deterministic)
+   you / your agent                    flowlint (deterministic)
    ────────────────                    ──────────────────────
    read the code    ──►  flow.json  ──►  <id>.drawio      <id>.md
                          (in git)         (regenerated, never hand-edited)
@@ -106,21 +115,21 @@ IR, and runs the renderer.
 ### By hand
 
 ```bash
-pip install uxflow
+pip install flowlint
 
-uxflow init checkout -o docs/ux-flows
+flowlint init checkout -o docs/ux-flows
 # edit docs/ux-flows/checkout.flow.json
-uxflow validate docs/ux-flows/checkout.flow.json
-uxflow render   docs/ux-flows/checkout.flow.json -o docs/ux-flows
+flowlint validate docs/ux-flows/checkout.flow.json
+flowlint render   docs/ux-flows/checkout.flow.json -o docs/ux-flows
 ```
 
-Without installing anything, substitute `python3 uxflow/scripts/uxflow.py` for `uxflow`.
+Without installing anything, substitute `python3 flowlint/scripts/flowlint.py` for `flowlint`.
 
 ### See it work right now
 
 ```bash
-python3 scripts/uxflow.py render examples/checkout.flow.json -o /tmp/demo
-python3 scripts/uxflow.py diff   examples/checkout.flow.json \
+python3 scripts/flowlint.py render examples/checkout.flow.json -o /tmp/demo
+python3 scripts/flowlint.py diff   examples/checkout.flow.json \
                                  examples/checkout-proposed.flow.json -o /tmp/demo
 ```
 
@@ -131,7 +140,7 @@ python3 scripts/uxflow.py diff   examples/checkout.flow.json \
 Model the flow as it is. Copy it. Fix it. Render the delta:
 
 ```bash
-python3 scripts/uxflow.py diff checkout.flow.json checkout-proposed.flow.json -o docs/ux-flows
+python3 scripts/flowlint.py diff checkout.flow.json checkout-proposed.flow.json -o docs/ux-flows
 ```
 
 From `examples/`, that produces:
@@ -155,15 +164,15 @@ That table is a design argument you can take to a stakeholder. The colour-coded 
 
 ## Keeping diagrams honest in CI
 
-Copy [`examples/ci/uxflow.yml`](examples/ci/uxflow.yml) into your app's
+Copy [`examples/ci/flowlint.yml`](examples/ci/flowlint.yml) into your app's
 `.github/workflows/`. The two lines that matter:
 
 ```yaml
-- run: python3 uxflow/scripts/uxflow.py check docs/ux-flows/*.flow.json -o docs/ux-flows
-- run: python3 uxflow/scripts/uxflow.py audit docs/ux-flows/*.flow.json --fail-on-high
+- run: python3 flowlint/scripts/flowlint.py stale docs/ux-flows/*.flow.json -o docs/ux-flows
+- run: python3 flowlint/scripts/flowlint.py check docs/ux-flows/*.flow.json --fail-on-high
 ```
 
-`check` compares each IR's content hash against `.uxflow.lock.json` and fails when someone
+`stale` compares each IR's content hash against `.flowlint.lock.json` and fails when someone
 edited the flow without regenerating. `--fail-on-high` blocks merges that introduce a dead end
 or a network call with no error branch.
 
@@ -209,7 +218,7 @@ bulur. Hiçbir hata mesajı yok, aynı butona tekrar basar, aynı sonucu alır.
 Every finding has a stable id. Accept one and it stops failing CI without disappearing:
 
 ```bash
-python3 scripts/uxflow.py ignore UXF-NOERR-0A7D --reason "Q3'te ele alınacak"
+python3 scripts/flowlint.py ignore UXF-NOERR-0A7D --reason "Q3'te ele alınacak"
 ```
 
 That is what makes `--fail-on-high` adoptable on a codebase that already exists.
@@ -234,16 +243,16 @@ The IR itself is stack-agnostic — anything you can read, you can model.
 ## CLI
 
 ```
-uxflow.py validate <flow.json>...                       schema + integrity check
-uxflow.py render   <flow.json>... [-o DIR]              .drawio + report
+flowlint.py validate <flow.json>...                       schema + integrity check
+flowlint.py render   <flow.json>... [-o DIR]              .drawio + report
                    [--formats drawio,md,svg,mermaid]    default: drawio,md
                    [--fail-on-high]
-uxflow.py audit    <flow.json>... [-o DIR]              report only
-uxflow.py diff     <before.json> <after.json> [-o DIR]  before/after + metric delta
-uxflow.py check    <flow.json>... [-o DIR]              CI guard against stale diagrams
-uxflow.py ignore   <FINDING-ID>... [--reason TEXT]      accept a finding
-uxflow.py init     <flow-id> [-o DIR]                   scaffold an IR file
-uxflow.py id       <route> [component]                  mint a stable node id
+flowlint.py check    <flow.json>... [-o DIR]              report only
+flowlint.py diff     <before.json> <after.json> [-o DIR]  before/after + metric delta
+flowlint.py check    <flow.json>... [-o DIR]              CI guard against stale diagrams
+flowlint.py ignore   <FINDING-ID>... [--reason TEXT]      accept a finding
+flowlint.py init     <flow-id> [-o DIR]                   scaffold an IR file
+flowlint.py id       <route> [component]                  mint a stable node id
 ```
 
 ---
@@ -255,8 +264,8 @@ SKILL.md                      Claude Code / Cowork entry point
 AGENTS.md                     entry point for every other agent
 pyproject.toml                PyPI packaging (no dependencies)
 schema/flow.schema.json       the IR contract
-scripts/uxflow.py             thin shim for vendored use
-scripts/uxflow_lib/           the package — ships to PyPI as `uxflow`
+scripts/flowlint.py             thin shim for vendored use
+scripts/flowlint_lib/           the package — ships to PyPI as `flowlint`
   cli.py                        argument parsing and commands
   analyze.py  catalog.py        audit rules and their prose
   benchmarks.py  report.py      metric verdicts and the Markdown report
@@ -265,7 +274,7 @@ scripts/uxflow_lib/           the package — ships to PyPI as `uxflow`
   ir.py  diffing.py             the IR and before/after comparison
 references/                   discovery playbooks, IR authoring, findings guide
 examples/                     two worked flows, a proposed redesign, and outputs
-tests/test_uxflow.py          64 tests, no dependencies
+tests/test_flowlint.py          64 tests, no dependencies
 ```
 
 ---
@@ -273,7 +282,7 @@ tests/test_uxflow.py          64 tests, no dependencies
 ## Design decisions worth knowing
 
 **Why not let draw.io auto-arrange?** Because the same IR must produce identical geometry
-everywhere, or every regeneration is a 400-line diff. uxflow implements its own layered
+everywhere, or every regeneration is a 400-line diff. flowlint implements its own layered
 (Sugiyama-style) layout: break cycles → layer → barycenter ordering → coordinates.
 
 **Why stable node ids?** So `diff` can tell "this screen changed" from "this screen was
@@ -302,24 +311,24 @@ metrics are the worst kind of bug in a tool people are supposed to trust.
 **As a CLI:**
 
 ```bash
-pip install uxflow
-uxflow init checkout -o docs/ux-flows
+pip install flowlint
+flowlint init checkout -o docs/ux-flows
 ```
 
-**As a Claude skill** — download `uxflow.skill` from
-[Releases](https://github.com/js-lover/uxflow/releases) and open it.
+**As a Claude skill** — download `flowlint.skill` from
+[Releases](https://github.com/js-lover/flowlint/releases) and open it.
 
 **Vendored into your repo** (works with every agent, and without one):
 
 ```bash
-git clone --depth 1 https://github.com/js-lover/uxflow.git
-rm -rf uxflow/.git
+git clone --depth 1 https://github.com/js-lover/flowlint.git
+rm -rf flowlint/.git
 ```
 
 Your agent picks it up from `AGENTS.md`; the CLI runs straight from
-`uxflow/scripts/uxflow.py` with nothing installed.
+`flowlint/scripts/flowlint.py` with nothing installed.
 
-All three run the same code. `pip install uxflow` pulls in no dependencies — standard
+All three run the same code. `pip install flowlint` pulls in no dependencies — standard
 library only is a feature, because the tool has to work inside whatever environment an
 agent happens to be in, with no resolver step.
 

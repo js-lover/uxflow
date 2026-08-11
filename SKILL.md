@@ -1,5 +1,5 @@
 ---
-name: uxflow
+name: flowlint
 description: >-
   Analyse an existing web or mobile application's codebase and generate editable UX flow
   diagrams (draw.io / .drawio, Mermaid) plus an actionable UX audit. Use this skill whenever
@@ -15,7 +15,7 @@ description: >-
 license: MIT
 ---
 
-# uxflow
+# flowlint
 
 ## What this is for
 
@@ -24,7 +24,7 @@ actually implements. The second one is written down nowhere. Error states, empty
 states, cancel paths, permission denials — these are rarely designed. They get
 improvised while coding, or left out entirely.
 
-**uxflow extracts the second flow from the code itself.** The value is not a pretty
+**flowlint extracts the second flow from the code itself.** The value is not a pretty
 diagram; it is light on the branches nobody looked at.
 
 Reach for it when the user is:
@@ -39,7 +39,7 @@ Reach for it when the user is:
 | Writing QA cases | Every branch in the diagram is a test case |
 | Producing audit documentation | Source-anchored, dated, kept in sync with the code by CI |
 
-**Say so when it does not fit.** uxflow reads existing code, so it cannot design a
+**Say so when it does not fit.** flowlint reads existing code, so it cannot design a
 flow that has not been written yet, it says nothing about visual design, and it does
 not know what real users do — only what the code permits. It complements analytics,
 it does not replace them. Where routing is generated dynamically at runtime, the map
@@ -52,7 +52,7 @@ will be incomplete, and the report must say so rather than guess.
 | Layer | Who produces it | File |
 | --- | --- | --- |
 | **IR** — what the flow *is* | you, the agent, by reading code | `docs/ux-flows/<id>.flow.json` |
-| **Diagram + report** | `scripts/uxflow.py`, deterministically | `<id>.drawio`, `<id>.md` |
+| **Diagram + report** | `scripts/flowlint.py`, deterministically | `<id>.drawio`, `<id>.md` |
 
 **Never hand-write `.drawio` XML or lay out coordinates.** You write JSON; the renderer
 does geometry. That is what makes output reproducible across machines, agents and
@@ -76,7 +76,7 @@ auth-login.md          the report, with the diagram embedded as Mermaid
 2. **Never invent metrics.** `taps`, `required_fields` and friction tags must be
    countable in the code. Do not estimate conversion or timings you have not measured.
 3. **Model what the code does, not what it should do.** Improvements belong in a
-   separate `-proposed` flow rendered through `uxflow.py diff`.
+   separate `-proposed` flow rendered through `flowlint.py diff`.
 4. **Ask before you render.** An app has dozens of flows; the user cares about a few.
 5. **Node ids are stable and semantic** (`checkout-payment`, not `node-7`).
 
@@ -88,11 +88,11 @@ auth-login.md          the report, with the diagram embedded as Mermaid
 
 ```bash
 python3 --version                    # 3.8+ required; no other dependency
-uxflow --help || python3 uxflow/scripts/uxflow.py --help
+flowlint --help || python3 flowlint/scripts/flowlint.py --help
 ```
 
-If `uxflow` is on PATH (installed with `pip install uxflow`), use that; otherwise call
-the vendored `python3 uxflow/scripts/uxflow.py`. The examples below use the vendored
+If `flowlint` is on PATH (installed with `pip install flowlint`), use that; otherwise call
+the vendored `python3 flowlint/scripts/flowlint.py`. The examples below use the vendored
 form because it always works.
 
 If `docs/ux-flows/*.flow.json` already exists, this is a **re-run**: read the existing
@@ -148,7 +148,7 @@ One file per flow. Read `references/ir-authoring.md` for the field guide and
 `schema/flow.schema.json` for the contract. Then:
 
 ```bash
-python3 uxflow/scripts/uxflow.py validate docs/ux-flows/auth-login.flow.json
+python3 flowlint/scripts/flowlint.py validate docs/ux-flows/auth-login.flow.json
 ```
 
 Fix everything it reports. The validator is strict on purpose.
@@ -156,7 +156,7 @@ Fix everything it reports. The validator is strict on purpose.
 ### Phase 5 — Render
 
 ```bash
-python3 uxflow/scripts/uxflow.py render docs/ux-flows/*.flow.json -o docs/ux-flows
+python3 flowlint/scripts/flowlint.py render docs/ux-flows/*.flow.json -o docs/ux-flows
 ```
 
 | Switch | Effect |
@@ -186,7 +186,7 @@ experiences, what to change, and the evidence.
 Each finding has a stable id (`UXF-NOERR-0A7D`). If the team accepts one:
 
 ```bash
-python3 uxflow/scripts/uxflow.py ignore UXF-NOERR-0A7D --reason "3. çeyrekte ele alınacak"
+python3 flowlint/scripts/flowlint.py ignore UXF-NOERR-0A7D --reason "3. çeyrekte ele alınacak"
 ```
 
 It moves to an "accepted" section of the report and stops failing CI, but stays visible.
@@ -201,7 +201,7 @@ Full guide: `references/findings-guide.md`.
 ```bash
 cp docs/ux-flows/checkout.flow.json docs/ux-flows/checkout-proposed.flow.json
 # edit the proposed file: remove steps, add error branches, merge screens
-python3 uxflow/scripts/uxflow.py diff docs/ux-flows/checkout.flow.json \
+python3 flowlint/scripts/flowlint.py diff docs/ux-flows/checkout.flow.json \
                                       docs/ux-flows/checkout-proposed.flow.json \
                                       -o docs/ux-flows
 ```
@@ -215,12 +215,12 @@ diff knows a screen was *changed* rather than *replaced*.
 ## Keeping diagrams honest
 
 ```yaml
-- run: python3 uxflow/scripts/uxflow.py check docs/ux-flows/*.flow.json -o docs/ux-flows
-- run: python3 uxflow/scripts/uxflow.py audit docs/ux-flows/*.flow.json --fail-on-high
+- run: python3 flowlint/scripts/flowlint.py stale docs/ux-flows/*.flow.json -o docs/ux-flows
+- run: python3 flowlint/scripts/flowlint.py check docs/ux-flows/*.flow.json --fail-on-high
 ```
 
-`check` compares each IR's content hash against `.uxflow.lock.json` and fails when
-someone edited the IR without regenerating. Copy-ready workflow: `examples/ci/uxflow.yml`.
+`stale` compares each IR's content hash against `.flowlint.lock.json` and fails when
+someone edited the IR without regenerating. Copy-ready workflow: `examples/ci/flowlint.yml`.
 
 ---
 

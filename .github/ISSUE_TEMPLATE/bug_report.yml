@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in uxflow behaves incorrectly
+description: Something in flowlint behaves incorrectly
 labels: [bug]
 body:
   - type: textarea
@@ -15,7 +15,7 @@ body:
     attributes:
       label: Command
       render: shell
-      placeholder: python3 scripts/uxflow.py render docs/ux-flows/checkout.flow.json -o docs/ux-flows
+      placeholder: python3 scripts/flowlint.py render docs/ux-flows/checkout.flow.json -o docs/ux-flows
     validations:
       required: true
 

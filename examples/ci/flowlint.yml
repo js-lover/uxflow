@@ -1,10 +1,10 @@
 # Consumer template — copy this into YOUR app's repository as
-# .github/workflows/uxflow.yml
+# .github/workflows/flowlint.yml
 #
-# It assumes uxflow lives at ./uxflow (vendored) and your flow definitions at
+# It assumes flowlint lives at ./flowlint (vendored) and your flow definitions at
 # ./docs/ux-flows/*.flow.json. Adjust both paths to match your layout.
 
-name: UX flows
+name: flowlint
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ on:
     branches: [main]
 
 jobs:
-  uxflow:
+  flowlint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,18 +28,18 @@ jobs:
 
       # 1. The IR must be well formed.
       - name: Validate flow definitions
-        run: python3 uxflow/scripts/uxflow.py validate docs/ux-flows/*.flow.json
+        run: python3 flowlint/scripts/flowlint.py validate docs/ux-flows/*.flow.json
 
       # 2. The committed diagrams must match the IR. Fails if someone edited a
       #    flow.json without regenerating — this is what stops diagrams rotting.
       - name: Check diagrams are up to date
-        run: python3 uxflow/scripts/uxflow.py check docs/ux-flows/*.flow.json -o docs/ux-flows
+        run: python3 flowlint/scripts/flowlint.py stale docs/ux-flows/*.flow.json -o docs/ux-flows
 
       # 3. Block merges that introduce a dead end or an unhandled network failure.
-      #    Findings the team has accepted live in .uxflowignore and do not fail the build,
+      #    Findings the team has accepted live in .flowlintignore and do not fail the build,
       #    which is what makes this switch adoptable on an existing codebase.
-      - name: UX audit
-        run: python3 uxflow/scripts/uxflow.py audit docs/ux-flows/*.flow.json --fail-on-high
+      - name: Lint the flows
+        run: python3 flowlint/scripts/flowlint.py check docs/ux-flows/*.flow.json --fail-on-high
 
       # 4. Surface the headline and priority list in the PR, so reviewers see the
       #    findings without opening a file.
@@ -47,7 +47,7 @@ jobs:
         if: always()
         run: |
           {
-            echo "## UX flow audit"
+            echo "## flowlint"
             for f in docs/ux-flows/*.md; do
               [ -e "$f" ] || continue
               echo ""

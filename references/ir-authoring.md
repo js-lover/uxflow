@@ -59,10 +59,10 @@ Semantic, stable, lowercase: `checkout-payment`, `auth-otp-verify`, `settings-de
 Derive from route + component, never from position. If a route is long or has params:
 
 ```bash
-python3 scripts/uxflow.py id "/checkout/[step]/payment" PaymentPage
+python3 scripts/flowlint.py id "/checkout/[step]/payment" PaymentPage
 ```
 
-**Renaming an id is a breaking change**: it churns the git diff and it makes `uxflow diff`
+**Renaming an id is a breaking change**: it churns the git diff and it makes `flowlint diff`
 report a delete + an add instead of a modification. Rename only when the screen really is
 a different screen.
 

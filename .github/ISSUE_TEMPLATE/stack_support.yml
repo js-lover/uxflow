@@ -1,5 +1,5 @@
 name: Stack support request
-description: Ask for (or offer) a discovery playbook for a framework uxflow does not cover yet
+description: Ask for (or offer) a discovery playbook for a framework flowlint does not cover yet
 labels: [stack-support]
 body:
   - type: markdown

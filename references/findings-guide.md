@@ -109,10 +109,10 @@ so a wide fan-out cannot hide a deeper branch.
 ## Suppression
 
 ```bash
-python3 scripts/uxflow.py ignore UXF-NOERR-0A7D --reason "Q3'te ele alınacak"
+python3 scripts/flowlint.py ignore UXF-NOERR-0A7D --reason "Q3'te ele alınacak"
 ```
 
-Writes to `.uxflowignore` (walked up from the output directory, like `.gitignore`).
+Writes to `.flowlintignore` (walked up from the output directory, like `.gitignore`).
 Suppressed findings move to an "accepted" section — they stop failing CI but stay
 visible, with the reason recorded. Without this, `--fail-on-high` is unadoptable on an
 existing codebase, and a check nobody can turn on is a check nobody runs.

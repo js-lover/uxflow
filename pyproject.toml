@@ -3,13 +3,13 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "uxflow"
-version = "1.2.0"
-description = "Turn an existing app's code into editable UX flow diagrams and an actionable UX audit."
+name = "flowlint"
+version = "1.3.0"
+description = "Lint your app's real user flows. Reads the codebase, maps every screen and branch, and reports the dead ends, unhandled errors and friction the code actually contains."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.8"
-authors = [{ name = "uxflow contributors" }]
+authors = [{ name = "flowlint contributors" }]
 keywords = [
     "ux", "ux-research", "flowchart", "drawio", "diagrams-net", "mermaid",
     "documentation-as-code", "static-analysis", "developer-tools", "ai-agents",
@@ -38,24 +38,24 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/js-lover/uxflow"
-Repository = "https://github.com/js-lover/uxflow"
-Issues = "https://github.com/js-lover/uxflow/issues"
-Changelog = "https://github.com/js-lover/uxflow/releases"
+Homepage = "https://github.com/js-lover/flowlint"
+Repository = "https://github.com/js-lover/flowlint"
+Issues = "https://github.com/js-lover/flowlint/issues"
+Changelog = "https://github.com/js-lover/flowlint/releases"
 
 [project.scripts]
-uxflow = "uxflow.cli:main"
+flowlint = "flowlint.cli:main"
 
-# The package ships from scripts/uxflow_lib/ under the import name `uxflow`.
+# The package ships from scripts/flowlint_lib/ under the import name `flowlint`.
 # The directory keeps its name so that a vendored checkout can still be run as
-# `python3 uxflow/scripts/uxflow.py` with no install; the modules use relative
+# `python3 flowlint/scripts/flowlint.py` with no install; the modules use relative
 # imports, so the same code serves both.
 [tool.setuptools]
-package-dir = { "uxflow" = "scripts/uxflow_lib" }
-packages = ["uxflow"]
+package-dir = { "flowlint" = "scripts/flowlint_lib" }
+packages = ["flowlint"]
 
 [tool.setuptools.package-data]
-uxflow = ["py.typed"]
+flowlint = ["py.typed"]
 
 [tool.setuptools.data-files]
-"share/uxflow/schema" = ["schema/flow.schema.json"]
+"share/flowlint/schema" = ["schema/flow.schema.json"]

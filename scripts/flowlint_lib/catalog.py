@@ -261,13 +261,15 @@ CATALOG = {
                "sonraya ertelenebilecek kararlar, atlanabilecek onaylar.",
     },
     "missing_source": {
-        "title": "Kaynak çapası olmayan düğüm",
+        "title": "Haritanın bir kısmı doğrulanamıyor",
         "severity": "low", "confidence": "certain", "effort": "S",
-        "what": "«{label}» düğümünde `source` alanı yok.",
-        "impact": "Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına "
-                  "duyulan güveni de zayıflatır.",
-        "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa "
-               "(varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.",
+        "what": "{count} düğümde `source` alanı yok: {names}.",
+        "impact": "Bu düğümlerin koda dayandığı doğrulanamıyor. Okuyucu haritanın "
+                  "hangi kısmının gerçek, hangi kısmının varsayım olduğunu ayırt "
+                  "edemeyince tamamına duyduğu güven zayıflar.",
+        "fix": "Her düğüme geldiği `dosya:satır` bilgisini ekle. Bu akış henüz "
+               "yazılmamış bir tasarımsa (örneğin bir `-proposed` dosyası) bu bulgu "
+               "beklenendir; `flowlint ignore` ile gerekçesiyle birlikte kabul et.",
     },
 }
 

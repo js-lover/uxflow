@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/uxflow/uxflow/schema/flow.schema.json",
-  "title": "UXFlow Intermediate Representation",
+  "$id": "https://github.com/js-lover/flowlint/schema/flow.schema.json",
+  "title": "flowlint Intermediate Representation",
   "description": "Agent-agnostic description of a single user flow extracted from an application codebase. Agents produce this file; the deterministic renderer turns it into .drawio / .mmd / .svg.",
   "type": "object",
   "required": ["version", "id", "title", "nodes", "edges"],

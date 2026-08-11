@@ -6,13 +6,13 @@
 
 ## Özet
 
-Bu akışta 12 bulgu var; 1 tanesi orta öncelikli. Ana yol 7 adım.
+Bu akışta 2 bulgu var; 1 tanesi orta öncelikli. Ana yol 7 adım.
 
 | | | |
 | --- | ---: | --- |
 | 🔴 **Yüksek öncelikli** | 0 | kullanıcıyı doğrudan etkiliyor |
 | 🟠 Orta | 1 | dönüşüme mal oluyor |
-| 🟡 Düşük | 11 | cilalama |
+| 🟡 Düşük | 1 | cilalama |
 | | | |
 | Ana yol | 7 adım | kullanıcının geçtiği nokta sayısı |
 | Çıkmaz | 0 | kullanıcının takıldığı yol sayısı |
@@ -24,17 +24,7 @@ Bu akışta 12 bulgu var; 1 tanesi orta öncelikli. Ana yol 7 adım.
 | # | ne | nerede | efor | detay |
 | ---: | --- | --- | --- | --- |
 | 1 | 🟠 Ana yol gereğinden uzun | Guest checkout (proposed)<br>— | L | [UXF-DEEP-2678](#uxf-deep-2678) |
-| 2 | 🟡 Kaynak çapası olmayan düğüm | Contact + shipping<br>— | S | [UXF-SRC-87CF](#uxf-src-87cf) |
-| 3 | 🟡 Kaynak çapası olmayan düğüm | Cart<br>— | S | [UXF-SRC-397E](#uxf-src-397e) |
-| 4 | 🟡 Kaynak çapası olmayan düğüm | POST /api/orders<br>— | S | [UXF-SRC-D2BF](#uxf-src-d2bf) |
-| 5 | 🟡 Kaynak çapası olmayan düğüm | Order could not be created<br>— | S | [UXF-SRC-DE37](#uxf-src-de37) |
-| 6 | 🟡 Kaynak çapası olmayan düğüm | Order confirmed<br>— | S | [UXF-SRC-D3E9](#uxf-src-d3e9) |
-| 7 | 🟡 Kaynak çapası olmayan düğüm | Payment declined<br>— | S | [UXF-SRC-0623](#uxf-src-0623) |
-| 8 | 🟡 Kaynak çapası olmayan düğüm | orders table<br>— | S | [UXF-SRC-4989](#uxf-src-4989) |
-| 9 | 🟡 Kaynak çapası olmayan düğüm | Payment<br>— | S | [UXF-SRC-110F](#uxf-src-110f) |
-| 10 | 🟡 Kaynak çapası olmayan düğüm | 3-D Secure (bank page)<br>— | S | [UXF-SRC-ABCA](#uxf-src-abca) |
-| 11 | 🟡 Kaynak çapası olmayan düğüm | POST /api/shipping/quote<br>— | S | [UXF-SRC-A57E](#uxf-src-a57e) |
-| 12 | 🟡 Kaynak çapası olmayan düğüm | Quote unavailable<br>— | S | [UXF-SRC-CEB0](#uxf-src-ceb0) |
+| 2 | 🟡 Haritanın bir kısmı doğrulanamıyor | Guest checkout (proposed)<br>— | S | [UXF-SRC-255A](#uxf-src-255a) |
 
 ## Akış
 
@@ -124,7 +114,7 @@ Kullanıcının hedefe ulaşmak için izlediği en uzun tam yolculuk — 7 adım
 
 **Akış büyüklüğü:** 13 düğüm · 17 geçiş · 5 ekran · 2 ağ çağrısı · 0 karar noktası · 6 hata dalı
 
-## Bulgular (12)
+## Bulgular (2)
 
 <a id="uxf-deep-2678"></a>
 
@@ -144,227 +134,27 @@ Her ek adım kullanıcı kaybı üretir. Uzun akışlar özellikle mobilde ve il
 
 Adımları birleştirmeyi dene: aynı ekranda toplanabilecek alanlar, sonraya ertelenebilecek kararlar, atlanabilecek onaylar.
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-DEEP-2678`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-DEEP-2678`</sub>
 
-<a id="uxf-src-87cf"></a>
+<a id="uxf-src-255a"></a>
 
-### 🟡 Kaynak çapası olmayan düğüm
+### 🟡 Haritanın bir kısmı doğrulanamıyor
 
-`UXF-SRC-87CF` · **düğüm:** Contact + shipping · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat) · **route:** `/checkout/address`
-
-**Ne oluyor**
-
-«Contact + shipping» düğümünde `source` alanı yok.
-
-**Kullanıcı ne yaşıyor**
-
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
-
-**Ne yapmalı**
-
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-87CF`</sub>
-
-<a id="uxf-src-397e"></a>
-
-### 🟡 Kaynak çapası olmayan düğüm
-
-`UXF-SRC-397E` · **düğüm:** Cart · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat) · **route:** `/cart`
+`UXF-SRC-255A` · **düğüm:** Guest checkout (proposed) · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat)
 
 **Ne oluyor**
 
-«Cart» düğümünde `source` alanı yok.
+11 düğümde `source` alanı yok: Cart, Contact + shipping, POST /api/shipping/quote, Quote unavailable, Payment, 3-D Secure (bank page) ve 5 tane daha.
 
 **Kullanıcı ne yaşıyor**
 
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
+Bu düğümlerin koda dayandığı doğrulanamıyor. Okuyucu haritanın hangi kısmının gerçek, hangi kısmının varsayım olduğunu ayırt edemeyince tamamına duyduğu güven zayıflar.
 
 **Ne yapmalı**
 
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
+Her düğüme geldiği `dosya:satır` bilgisini ekle. Bu akış henüz yazılmamış bir tasarımsa (örneğin bir `-proposed` dosyası) bu bulgu beklenendir; `flowlint ignore` ile gerekçesiyle birlikte kabul et.
 
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-397E`</sub>
-
-<a id="uxf-src-d2bf"></a>
-
-### 🟡 Kaynak çapası olmayan düğüm
-
-`UXF-SRC-D2BF` · **düğüm:** POST /api/orders · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat)
-
-**Ne oluyor**
-
-«POST /api/orders» düğümünde `source` alanı yok.
-
-**Kullanıcı ne yaşıyor**
-
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
-
-**Ne yapmalı**
-
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-D2BF`</sub>
-
-<a id="uxf-src-de37"></a>
-
-### 🟡 Kaynak çapası olmayan düğüm
-
-`UXF-SRC-DE37` · **düğüm:** Order could not be created · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat)
-
-**Ne oluyor**
-
-«Order could not be created» düğümünde `source` alanı yok.
-
-**Kullanıcı ne yaşıyor**
-
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
-
-**Ne yapmalı**
-
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-DE37`</sub>
-
-<a id="uxf-src-d3e9"></a>
-
-### 🟡 Kaynak çapası olmayan düğüm
-
-`UXF-SRC-D3E9` · **düğüm:** Order confirmed · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat) · **route:** `/checkout/success`
-
-**Ne oluyor**
-
-«Order confirmed» düğümünde `source` alanı yok.
-
-**Kullanıcı ne yaşıyor**
-
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
-
-**Ne yapmalı**
-
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-D3E9`</sub>
-
-<a id="uxf-src-0623"></a>
-
-### 🟡 Kaynak çapası olmayan düğüm
-
-`UXF-SRC-0623` · **düğüm:** Payment declined · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat) · **route:** `/checkout/declined`
-
-**Ne oluyor**
-
-«Payment declined» düğümünde `source` alanı yok.
-
-**Kullanıcı ne yaşıyor**
-
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
-
-**Ne yapmalı**
-
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-0623`</sub>
-
-<a id="uxf-src-4989"></a>
-
-### 🟡 Kaynak çapası olmayan düğüm
-
-`UXF-SRC-4989` · **düğüm:** orders table · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat)
-
-**Ne oluyor**
-
-«orders table» düğümünde `source` alanı yok.
-
-**Kullanıcı ne yaşıyor**
-
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
-
-**Ne yapmalı**
-
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-4989`</sub>
-
-<a id="uxf-src-110f"></a>
-
-### 🟡 Kaynak çapası olmayan düğüm
-
-`UXF-SRC-110F` · **düğüm:** Payment · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat) · **route:** `/checkout/payment`
-
-**Ne oluyor**
-
-«Payment» düğümünde `source` alanı yok.
-
-**Kullanıcı ne yaşıyor**
-
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
-
-**Ne yapmalı**
-
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-110F`</sub>
-
-<a id="uxf-src-abca"></a>
-
-### 🟡 Kaynak çapası olmayan düğüm
-
-`UXF-SRC-ABCA` · **düğüm:** 3-D Secure (bank page) · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat)
-
-**Ne oluyor**
-
-«3-D Secure (bank page)» düğümünde `source` alanı yok.
-
-**Kullanıcı ne yaşıyor**
-
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
-
-**Ne yapmalı**
-
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-ABCA`</sub>
-
-<a id="uxf-src-a57e"></a>
-
-### 🟡 Kaynak çapası olmayan düğüm
-
-`UXF-SRC-A57E` · **düğüm:** POST /api/shipping/quote · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat)
-
-**Ne oluyor**
-
-«POST /api/shipping/quote» düğümünde `source` alanı yok.
-
-**Kullanıcı ne yaşıyor**
-
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
-
-**Ne yapmalı**
-
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-A57E`</sub>
-
-<a id="uxf-src-ceb0"></a>
-
-### 🟡 Kaynak çapası olmayan düğüm
-
-`UXF-SRC-CEB0` · **düğüm:** Quote unavailable · **önem:** düşük · **güven:** kesin · **efor:** S (~1 saat)
-
-**Ne oluyor**
-
-«Quote unavailable» düğümünde `source` alanı yok.
-
-**Kullanıcı ne yaşıyor**
-
-Bu düğümün koda dayandığı doğrulanamıyor. Haritanın geri kalanına duyulan güveni de zayıflatır.
-
-**Ne yapmalı**
-
-Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt.
-
-<sub>Kabul edip susturmak için: `uxflow ignore UXF-SRC-CEB0`</sub>
+<sub>Kabul edip susturmak için: `flowlint ignore UXF-SRC-255A`</sub>
 
 ## Bilgi notları
 
@@ -438,125 +228,15 @@ Bu rapor `checkout-proposed.flow.json` dosyasından üretildi; o dosya da kod ta
       "fix": "Adımları birleştirmeyi dene: aynı ekranda toplanabilecek alanlar, sonraya ertelenebilecek kararlar, atlanabilecek onaylar."
     },
     {
-      "id": "UXF-SRC-87CF",
+      "id": "UXF-SRC-255A",
       "code": "missing_source",
       "severity": "low",
       "confidence": "certain",
       "effort": "S",
-      "node": "address",
-      "label": "Contact + shipping",
+      "node": "",
+      "label": "Guest checkout (proposed)",
       "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
-    },
-    {
-      "id": "UXF-SRC-397E",
-      "code": "missing_source",
-      "severity": "low",
-      "confidence": "certain",
-      "effort": "S",
-      "node": "cart",
-      "label": "Cart",
-      "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
-    },
-    {
-      "id": "UXF-SRC-D2BF",
-      "code": "missing_source",
-      "severity": "low",
-      "confidence": "certain",
-      "effort": "S",
-      "node": "charge",
-      "label": "POST /api/orders",
-      "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
-    },
-    {
-      "id": "UXF-SRC-DE37",
-      "code": "missing_source",
-      "severity": "low",
-      "confidence": "certain",
-      "effort": "S",
-      "node": "charge-error",
-      "label": "Order could not be created",
-      "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
-    },
-    {
-      "id": "UXF-SRC-D3E9",
-      "code": "missing_source",
-      "severity": "low",
-      "confidence": "certain",
-      "effort": "S",
-      "node": "confirm",
-      "label": "Order confirmed",
-      "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
-    },
-    {
-      "id": "UXF-SRC-0623",
-      "code": "missing_source",
-      "severity": "low",
-      "confidence": "certain",
-      "effort": "S",
-      "node": "declined",
-      "label": "Payment declined",
-      "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
-    },
-    {
-      "id": "UXF-SRC-4989",
-      "code": "missing_source",
-      "severity": "low",
-      "confidence": "certain",
-      "effort": "S",
-      "node": "orders-db",
-      "label": "orders table",
-      "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
-    },
-    {
-      "id": "UXF-SRC-110F",
-      "code": "missing_source",
-      "severity": "low",
-      "confidence": "certain",
-      "effort": "S",
-      "node": "payment",
-      "label": "Payment",
-      "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
-    },
-    {
-      "id": "UXF-SRC-ABCA",
-      "code": "missing_source",
-      "severity": "low",
-      "confidence": "certain",
-      "effort": "S",
-      "node": "psp",
-      "label": "3-D Secure (bank page)",
-      "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
-    },
-    {
-      "id": "UXF-SRC-A57E",
-      "code": "missing_source",
-      "severity": "low",
-      "confidence": "certain",
-      "effort": "S",
-      "node": "shipping-api",
-      "label": "POST /api/shipping/quote",
-      "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
-    },
-    {
-      "id": "UXF-SRC-CEB0",
-      "code": "missing_source",
-      "severity": "low",
-      "confidence": "certain",
-      "effort": "S",
-      "node": "shipping-error",
-      "label": "Quote unavailable",
-      "evidence": [],
-      "fix": "Düğümün geldiği `dosya:satır` bilgisini ekle. Koda dayanmıyorsa (varsayım, gelecek plan) IR'dan çıkar ya da `note` ile açıkça belirt."
+      "fix": "Her düğüme geldiği `dosya:satır` bilgisini ekle. Bu akış henüz yazılmamış bir tasarımsa (örneğin bir `-proposed` dosyası) bu bulgu beklenendir; `flowlint ignore` ile gerekçesiyle birlikte kabul et."
     }
   ],
   "suppressed": []
@@ -592,7 +272,7 @@ Bu rapor `checkout-proposed.flow.json` dosyasından üretildi; o dosya da kod ta
 | friction tags | 8 | 0 | -8 |
 | high-severity findings | 7 | 0 | -7 |
 | medium-severity findings | 5 | 1 | -4 |
-| low-severity findings | 0 | 11 | +11 |
+| low-severity findings | 0 | 1 | +1 |
 
 ## Findings resolved
 
@@ -610,17 +290,7 @@ Bu rapor `checkout-proposed.flow.json` dosyasından üretildi; o dosya da kod ta
 
 ## Findings introduced
 
-- `missing_source` on `address`
-- `missing_source` on `cart`
-- `missing_source` on `charge`
-- `missing_source` on `charge-error`
-- `missing_source` on `confirm`
-- `missing_source` on `declined`
-- `missing_source` on `orders-db`
-- `missing_source` on `payment`
-- `missing_source` on `psp`
-- `missing_source` on `shipping-api`
-- `missing_source` on `shipping-error`
+- `missing_source` on `(flow)`
 
 ## Added
 

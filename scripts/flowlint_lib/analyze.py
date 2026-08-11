@@ -296,11 +296,24 @@ def _informational(doc):
 
 
 def _model_quality(doc, raw):
-    for n in doc["nodes"]:
-        if n["type"] in ("start", "end", "note"):
-            continue
-        if not n.get("source"):
-            raw.append(_mk("missing_source", n["id"], n))
+    """One finding for the whole flow, not one per node.
+
+    A proposed redesign has no source anchors by definition, so per-node
+    reporting buried a dozen real findings under a wall of identical rows. The
+    reader needs to know the map is partly unverified -- once.
+    """
+    missing = [n for n in doc["nodes"]
+               if n["type"] not in ("start", "end", "note") and not n.get("source")]
+    if not missing:
+        return
+    names = ", ".join(n["label"] for n in missing[:6])
+    if len(missing) > 6:
+        names += " ve %d tane daha" % (len(missing) - 6)
+    f = _mk("missing_source", "", None,
+            {"label": doc["title"], "count": len(missing), "names": names})
+    f["label"] = doc["title"]
+    f["evidence"] = []
+    raw.append(f)
 
 
 # ---------------------------------------------------------------- primary path
