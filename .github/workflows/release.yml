@@ -37,7 +37,7 @@ jobs:
           rm -rf build && mkdir -p build/flowlint
           cp -r SKILL.md AGENTS.md README.md LICENSE CONTRIBUTING.md pyproject.toml \
                 schema scripts references examples tests build/flowlint/
-          rm -rf build/flowlint/examples/output build/flowlint/examples/preview
+          rm -rf build/flowlint/examples/output
           find build -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
           find build -name '*.pyc' -delete 2>/dev/null || true
           cd build && zip -qr ../flowlint.skill flowlint
