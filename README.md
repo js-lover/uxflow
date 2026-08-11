@@ -315,7 +315,19 @@ pip install flowlint
 flowlint init checkout -o docs/ux-flows
 ```
 
-**As a Claude skill** — download `flowlint.skill` from
+**As a skill in Claude Code** — a skill is just a directory with a `SKILL.md`, so
+symlink the checkout and it stays current with every `git pull`:
+
+```bash
+git clone https://github.com/js-lover/flowlint.git ~/src/flowlint
+mkdir -p ~/.claude/skills
+ln -s ~/src/flowlint ~/.claude/skills/flowlint
+```
+
+Then `/flowlint` in any project, or just ask for a flow map and Claude loads it.
+Use `.claude/skills/flowlint` instead of `~/.claude/skills/` to scope it to one repo.
+
+**As a skill in Claude Cowork** — download `flowlint.skill` from
 [Releases](https://github.com/js-lover/flowlint/releases) and open it.
 
 **Vendored into your repo** (works with every agent, and without one):

@@ -76,7 +76,7 @@ auth-login.md          the report, with the diagram embedded as Mermaid
 2. **Never invent metrics.** `taps`, `required_fields` and friction tags must be
    countable in the code. Do not estimate conversion or timings you have not measured.
 3. **Model what the code does, not what it should do.** Improvements belong in a
-   separate `-proposed` flow rendered through `flowlint.py diff`.
+   separate `-proposed` flow rendered through `flowlint diff`.
 4. **Ask before you render.** An app has dozens of flows; the user cares about a few.
 5. **Node ids are stable and semantic** (`checkout-payment`, not `node-7`).
 
@@ -86,14 +86,23 @@ auth-login.md          the report, with the diagram embedded as Mermaid
 
 ### Phase 0 — Locate the app and the tool
 
+The renderer can be in three places depending on how flowlint was installed. Find it
+once, then use that form for every command in this document. Try in order:
+
 ```bash
-python3 --version                    # 3.8+ required; no other dependency
-flowlint --help || python3 flowlint/scripts/flowlint.py --help
+python3 --version                              # 3.8+ required; no other dependency
+
+flowlint --help                                       # 1. pip install flowlint
+python3 "$SKILL_DIR/scripts/flowlint.py" --help       # 2. bundled with this skill
+python3 flowlint/scripts/flowlint.py --help           # 3. vendored in the user's repo
 ```
 
-If `flowlint` is on PATH (installed with `pip install flowlint`), use that; otherwise call
-the vendored `python3 flowlint/scripts/flowlint.py`. The examples below use the vendored
-form because it always works.
+**Option 2 is the one to remember.** `scripts/flowlint.py` sits next to the `SKILL.md`
+you are reading right now. When flowlint is installed as a skill and is not on PATH,
+run it from that directory — the working directory is the user's project, not the
+skill, so a relative path will not find it. Resolve the absolute path once and reuse it.
+
+Below, `flowlint` stands for whichever form worked.
 
 If `docs/ux-flows/*.flow.json` already exists, this is a **re-run**: read the existing
 IR, update it in place, preserve node ids.
@@ -148,7 +157,7 @@ One file per flow. Read `references/ir-authoring.md` for the field guide and
 `schema/flow.schema.json` for the contract. Then:
 
 ```bash
-python3 flowlint/scripts/flowlint.py validate docs/ux-flows/auth-login.flow.json
+flowlint validate docs/ux-flows/auth-login.flow.json
 ```
 
 Fix everything it reports. The validator is strict on purpose.
@@ -156,7 +165,7 @@ Fix everything it reports. The validator is strict on purpose.
 ### Phase 5 — Render
 
 ```bash
-python3 flowlint/scripts/flowlint.py render docs/ux-flows/*.flow.json -o docs/ux-flows
+flowlint render docs/ux-flows/*.flow.json -o docs/ux-flows
 ```
 
 | Switch | Effect |
@@ -186,7 +195,7 @@ experiences, what to change, and the evidence.
 Each finding has a stable id (`UXF-NOERR-0A7D`). If the team accepts one:
 
 ```bash
-python3 flowlint/scripts/flowlint.py ignore UXF-NOERR-0A7D --reason "3. çeyrekte ele alınacak"
+flowlint ignore UXF-NOERR-0A7D --reason "3. çeyrekte ele alınacak"
 ```
 
 It moves to an "accepted" section of the report and stops failing CI, but stays visible.
@@ -201,7 +210,7 @@ Full guide: `references/findings-guide.md`.
 ```bash
 cp docs/ux-flows/checkout.flow.json docs/ux-flows/checkout-proposed.flow.json
 # edit the proposed file: remove steps, add error branches, merge screens
-python3 flowlint/scripts/flowlint.py diff docs/ux-flows/checkout.flow.json \
+flowlint diff docs/ux-flows/checkout.flow.json \
                                       docs/ux-flows/checkout-proposed.flow.json \
                                       -o docs/ux-flows
 ```
@@ -215,8 +224,8 @@ diff knows a screen was *changed* rather than *replaced*.
 ## Keeping diagrams honest
 
 ```yaml
-- run: python3 flowlint/scripts/flowlint.py stale docs/ux-flows/*.flow.json -o docs/ux-flows
-- run: python3 flowlint/scripts/flowlint.py check docs/ux-flows/*.flow.json --fail-on-high
+- run: flowlint stale docs/ux-flows/*.flow.json -o docs/ux-flows
+- run: flowlint check docs/ux-flows/*.flow.json --fail-on-high
 ```
 
 `stale` compares each IR's content hash against `.flowlint.lock.json` and fails when
