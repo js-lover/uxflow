@@ -29,9 +29,9 @@ LANE_DEFAULT_COLORS = ["#F8FAFC", "#F1F5F9", "#F8FAFC", "#F1F5F9", "#F8FAFC"]
 # mermaid: (open, close) delimiters around the quoted label
 SHAPES = {
     "start":    {"drawio": "ellipse;whiteSpace=wrap;html=1;",
-                 "mermaid": ("([", "])"), "min_w": 140, "min_h": 50},
+                 "mermaid": ('(["', '"])'), "min_w": 140, "min_h": 50},
     "end":      {"drawio": "ellipse;whiteSpace=wrap;html=1;",
-                 "mermaid": ("([", "])"), "min_w": 140, "min_h": 50},
+                 "mermaid": ('(["', '"])'), "min_w": 140, "min_h": 50},
     "screen":   {"drawio": "rounded=1;arcSize=8;whiteSpace=wrap;html=1;",
                  "mermaid": ('["', '"]'), "min_w": 190, "min_h": 60},
     "modal":    {"drawio": "rounded=1;arcSize=8;dashed=1;dashPattern=8 4;whiteSpace=wrap;html=1;",

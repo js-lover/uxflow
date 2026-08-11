@@ -414,7 +414,17 @@ def _topo(dag, ids):
 
 
 def _failure_exits(doc, starts, ends, out):
-    """How many distinct ways can a user end up stuck, short of the goal?"""
+    """How many distinct ways can a user end up stuck, short of the goal?
+
+    This must agree with the findings, or the report contradicts itself. An
+    earlier version counted any node without a *forward* edge, which flagged
+    every error toast whose single edge back to the form is the correct design --
+    producing "no structural problems found" next to "6 dead ends, unreliable
+    flow" in the same report.
+
+    Stuck means stuck: no way out at all, or a full screen you can only retreat
+    from. Exactly the conditions behind `deadend` and `only_exit_is_back`.
+    """
     terminal_ok = ("end", "external", "data", "note")
     count = 0
     for n in doc["nodes"]:
@@ -422,9 +432,10 @@ def _failure_exits(doc, starts, ends, out):
         if nid in ends or n["type"] in terminal_ok:
             continue
         forward = [e for e in out[nid] if e.get("kind") != "back"]
-        if not forward:
+        back = [e for e in out[nid] if e.get("kind") == "back"]
+        if not forward and not back:
             count += 1
-        elif n.get("kind") == "error" and all(e["to"] == nid for e in forward):
+        elif not forward and n["type"] == "screen":
             count += 1
     return count
 

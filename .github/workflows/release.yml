@@ -35,12 +35,26 @@ jobs:
       - name: Build uxflow.skill
         run: |
           rm -rf build && mkdir -p build/uxflow
-          cp -r SKILL.md AGENTS.md README.md LICENSE CONTRIBUTING.md \
+          cp -r SKILL.md AGENTS.md README.md LICENSE CONTRIBUTING.md pyproject.toml \
                 schema scripts references examples tests build/uxflow/
           rm -rf build/uxflow/examples/output build/uxflow/examples/preview
           find build -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+          find build -name '*.pyc' -delete 2>/dev/null || true
           cd build && zip -qr ../uxflow.skill uxflow
           cd .. && unzip -l uxflow.skill
+
+      # Unpack the bundle somewhere clean and actually run it. A .skill that
+      # unzips but cannot execute is the failure mode nobody notices until a
+      # user reports it.
+      - name: Smoke-test the bundle
+        run: |
+          rm -rf /tmp/sk && mkdir /tmp/sk && cd /tmp/sk
+          unzip -q "$GITHUB_WORKSPACE/uxflow.skill"
+          python3 uxflow/scripts/uxflow.py --help > /dev/null
+          python3 uxflow/scripts/uxflow.py validate uxflow/examples/*.flow.json
+          python3 uxflow/scripts/uxflow.py render uxflow/examples/auth-login.flow.json -o out
+          test -f out/auth-login.drawio && test -f out/auth-login.md
+          cd uxflow && python3 -m unittest discover -s tests
 
       - name: Attach to the release
         uses: softprops/action-gh-release@v2

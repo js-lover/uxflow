@@ -70,7 +70,52 @@ def _rank(doc, out, inc, starts):
                 queue.append(nxt)
     for k in ids:                          # safety net for pathological graphs
         rank.setdefault(k, 0)
+
+    _separate_components(ids, out, inc, rank)
     return rank, back
+
+
+def _separate_components(ids, out, inc, rank):
+    """Stack disconnected sub-flows instead of interleaving them.
+
+    A flow with two entry points -- say "create a group" and "accept an invite" --
+    is two weakly connected components. Ranking them together puts unrelated
+    screens side by side and drags edges across the whole canvas to reach them.
+    Giving each component its own band of ranks keeps each sub-flow readable and
+    costs nothing but vertical space.
+    """
+    undirected = {i: set() for i in ids}
+    for a in ids:
+        for b in out[a]:
+            undirected[a].add(b)
+            undirected[b].add(a)
+        for b in inc[a]:
+            undirected[a].add(b)
+            undirected[b].add(a)
+
+    seen, components = set(), []
+    for start in ids:                       # ids order is the IR order: deterministic
+        if start in seen:
+            continue
+        stack, group = [start], []
+        seen.add(start)
+        while stack:
+            cur = stack.pop()
+            group.append(cur)
+            for nxt in sorted(undirected[cur]):
+                if nxt not in seen:
+                    seen.add(nxt)
+                    stack.append(nxt)
+        components.append(group)
+
+    if len(components) < 2:
+        return
+    offset = 0
+    for group in components:
+        local_max = max(rank[n] for n in group)
+        for n in group:
+            rank[n] += offset
+        offset += local_max + 1
 
 
 # -------------------------------------------------------------------- ordering

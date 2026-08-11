@@ -3,4 +3,4 @@
 Zero third-party dependencies: Python 3.8+ standard library only.
 """
 
-__version__ = "1.1.1"
+__version__ = "1.2.0"

@@ -6,6 +6,7 @@
 import copy
 import json
 import os
+import re
 import sys
 import unittest
 import xml.etree.ElementTree as ET
@@ -220,6 +221,39 @@ class TestRenderers(unittest.TestCase):
         self.assertIn("#quot;", out)
         self.assertNotIn('"hi"', out)
 
+    def test_mermaid_escapes_shape_terminators(self):
+        """A single raw "(" in a label aborts the whole diagram with a parse error.
+
+        Real labels look like "Silinemedi (Alert)" and "Bitiş < başlangıç", which
+        is exactly how this was found.
+        """
+        doc = minimal()
+        doc["nodes"][1]["label"] = "Silinemedi (Alert) [x] {y} a<b>c c|d"
+        doc["edges"][1]["label"] = "iptal (kalmaya devam)"
+        out = mermaid.render(doc)
+        for raw, code in (("(", "#40;"), (")", "#41;"), ("[", "#91;"), ("]", "#93;"),
+                          ("{", "#123;"), ("}", "#125;"), ("<", "#60;"), (">", "#62;")):
+            self.assertIn(code, out, raw)
+        for line in out.splitlines():
+            body = line.strip()
+            if body.startswith("%%") or body.startswith("class") or "subgraph" in body:
+                continue
+            for chunk in re.findall(r'"([^"]*)"', body):
+                # <br/> is the one piece of markup Mermaid wants inside a label
+                self.assertNotRegex(chunk.replace("<br/>", ""), r"[()\[\]{}|<>]", body)
+
+    def test_mermaid_quotes_every_node_label(self):
+        """An unquoted label is one stray character away from a parse error."""
+        doc = ir.load(EXAMPLE)
+        out = mermaid.render(doc, annotated=False)
+        idx = ir.index(doc)
+        for node in doc["nodes"]:
+            mid = mermaid._mid(node["id"])
+            for line in out.splitlines():
+                if line.strip().startswith(mid + "(") or line.strip().startswith(mid + "["):
+                    self.assertIn('"', line, line)
+                    break
+
     def test_mermaid_avoids_reserved_words(self):
         doc = minimal()
         doc["nodes"][2]["id"] = "end"
@@ -273,8 +307,31 @@ class TestAudit(unittest.TestCase):
         md = report.render(self.doc, self.report)
         self.assertIn("UX raporu", md)
         self.assertIn("## Ana yol", md)
-        self.assertIn("## Öncelik sırası", md)
+        self.assertIn("## Ne yapmalı", md)
         self.assertIn("src/app/checkout/declined/page.tsx:9", md)
+
+    def test_report_ends_with_a_machine_readable_block(self):
+        """An agent should not have to parse prose to get the facts."""
+        md = report.render(self.doc, self.report)
+        self.assertIn("## Makine okuması için", md)
+        blob = md.split("```json", 1)[1].split("```", 1)[0]
+        payload = json.loads(blob)
+        self.assertEqual(payload["flow"], self.doc["id"])
+        self.assertEqual(len(payload["findings"]), len(self.report["findings"]))
+        self.assertIn("failure_exits", payload["metrics"])
+
+    def test_metrics_and_findings_do_not_contradict(self):
+        """A report claiming no problems while counting dead ends is incoherent.
+
+        `failure_exits` used to count any node without a forward edge, which
+        flagged every error toast whose single edge back to the form is the
+        correct design.
+        """
+        for path in (EXAMPLE, PROPOSED):
+            rep = analyze.audit(ir.load(path))
+            stuck = {f["code"] for f in rep["findings"]} & {"deadend", "only_exit_is_back"}
+            if not stuck:
+                self.assertEqual(rep["metrics"]["failure_exits"], 0, path)
 
     def test_report_embeds_the_diagram(self):
         md = report.render(self.doc, self.report, embed_diagram=True)
