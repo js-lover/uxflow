@@ -28,6 +28,11 @@ flowlint check docs/ux-flows/*.flow.json --fail-on-high
     high   External hand-off with no cancel path — Google OAuth   app/login/page.tsx:20
 ```
 
+<p align="center">
+  <img src="docs/demo.gif" width="100%"
+       alt="flowlint rendering a credit-application flow: the terminal command runs, then the generated diagram opens in draw.io.">
+</p>
+
 ---
 
 ## Why
