@@ -1,14 +1,13 @@
-# flowlint
-
-<!-- banner: docs/banner.png -->
+<p align="center">
+  <img src="docs/banner.png" width="100%"
+       alt="flowlint — a linter for your user flows. A flow diagram where most of the path is healthy and one branch, drawn in red, ends in a screen with no way out.">
+</p>
 
 [![CI](https://github.com/js-lover/flowlint/actions/workflows/flowlint.yml/badge.svg)](https://github.com/js-lover/flowlint/actions/workflows/flowlint.yml)
 [![PyPI](https://img.shields.io/pypi/v/flowlint.svg)](https://pypi.org/project/flowlint/)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-
-**A linter for your app's user flows.**
 
 Your linter checks syntax. Your type checker checks types. Nothing checks whether a
 user can get *out* of the screen they just landed on.
